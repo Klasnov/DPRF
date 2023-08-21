@@ -48,11 +48,11 @@ for c in range(n_clients):
 
 # Save as .pt files
 for c in range(n_clients):
-    client_dir = './data/client{}'.format(c + 1)
+    client_dir = './data/minst/data/client{}'.format(c + 1)
     if not os.path.exists(client_dir):
         os.makedirs(client_dir)
     torch.save(torch.tensor(X_train[client_data_idx[c]]), os.path.join(client_dir, 'x.pt'))
     torch.save(torch.tensor(y_train[client_data_idx[c]]), os.path.join(client_dir, 'y.pt'))
 
-torch.save(torch.tensor(X_test), './data/x_test.pt')
-torch.save(torch.tensor(y_test), './data/y_test.pt')
+torch.save(torch.tensor(X_test), './data/minst/data/x_test.pt')
+torch.save(torch.tensor(y_test), './data/minst/data/y_test.pt')

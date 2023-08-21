@@ -1,10 +1,11 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from base import BaseUser, BaseServer
+from base import BaseClient, BaseServer
 
 
-class pFMeMoUser(BaseUser):
-    def __init__(self, client_id, dataset, model, local_epochs, local_batch_size, alpha, delta, lr_p, lr_l):
+class pFMeMoClient(BaseClient):
+    def __init__(self, client_id, dataset, model: nn.Module, local_epochs, local_batch_size, alpha, delta, lr_p, lr_l):
         super().__init__(client_id, dataset, model, local_epochs, local_batch_size)
         self.alpha = alpha  # Regularization parameter for personalized updates
         self.delta = delta  # Maximum squared norm of personalized update
@@ -111,6 +112,4 @@ class pFMeMoUser(BaseUser):
         return local_gradient
 
 class pFMeMoServer(BaseServer):
-    def __init__(self):
-        super().__init__()
-        pass
+    pass
