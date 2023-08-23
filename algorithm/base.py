@@ -48,6 +48,8 @@ class BaseClient:
         train_size = int(0.8 * len(data))
         test_size = len(data) - train_size
         train_dataset, test_dataset = random_split(TensorDataset(data, labels), [train_size, test_size])
+        print("Train dataset length:", len(train_dataset))
+        print("Test dataset length:", len(test_dataset))
         self.train_data = train_dataset.dataset.tensors[0]
         self.train_labels = train_dataset.dataset.tensors[1]
         self.test_data = test_dataset.dataset.tensors[0]
@@ -135,7 +137,7 @@ class BaseClient:
 
 class BaseServer:
     def __init__(self, algorithm: str, dataset: str, model: nn.Module, global_learning_rate: float,
-                 user_selection_ratio: float):
+                 user_selection_ratio: float, round: int):
         """
         Initialize the BaseServer for federated learning.
 
@@ -145,6 +147,7 @@ class BaseServer:
             model (nn.Module): Global model for federated learning.
             global_learning_rate (float): Global learning rate for model aggregation.
             user_selection_ratio (float): Ratio of users selected for model aggregation.
+            round (int): Total rounds of federated learning.
 
         Attributes:
             algorithm (str): Algorithm name.
@@ -153,6 +156,7 @@ class BaseServer:
             global_learning_rate (float): Global learning rate.
             clients (list): List of participating clients (BaseClient instances).
             user_selection_ratio (float): Ratio of users selected for each model aggregation round.
+            round (int): Total rounds of federated learning.
             train_accuracies (list): List to store training accuracies over rounds.
             train_losses (list): List to store training losses over rounds.
             test_accuracies (list): List to store test accuracies over rounds.
@@ -168,6 +172,7 @@ class BaseServer:
         self.global_learning_rate = global_learning_rate
         self.clients = []
         self.user_selection_ratio = user_selection_ratio
+        self.round = round
         self.train_accuracies = []
         self.train_losses = []
         self.test_accuracies = []
@@ -194,7 +199,7 @@ class BaseServer:
         for client in self.clients:
             client.set_model(self.global_model.state_dict())
 
-    def select_users(self) -> list:
+    def select_clients(self) -> list:
         """
         Select users based on the user_selection_ratio.
 
@@ -282,5 +287,5 @@ class BaseServer:
         result_df = pd.DataFrame(result_data)
         result_dir = f'./result/{self.algorithm}'
         os.makedirs(result_dir, exist_ok=True)
-        result_file = f'{result_dir}/{self.dataset}.csv'
+        result_file = f'{result_dir}/{self.dataset}_{self.round}.csv'
         result_df.to_csv(result_file, index=False)
