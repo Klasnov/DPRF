@@ -1,7 +1,10 @@
+import torch
 from algorithm.pFMeMo import pFMeMoServer, pFMeMoClient
 from model.model import Minst_Model
 
 def main():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     dataset = "mnist"
     algorithm = "pFMeMo"
 
@@ -20,7 +23,7 @@ def main():
     #         dataset = "mnist"
     #         break
     #     elif dataset_choice == 'b':
-    #         dataset = "Cifar10"
+    #         dataset = "cifar10"
     #         break
     #     else:
     #         print("Invalid dataset choice.")
@@ -63,7 +66,7 @@ def main():
     local_batch_size = 32
 
     if algorithm == "pFMeMo":
-        server = pFMeMoServer(algorithm, dataset, model, lr_g, user_selection_ratio, round)
+        server = pFMeMoServer(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
         
         alpha = 0.5
         delta = 10
@@ -73,8 +76,7 @@ def main():
         if dataset == "mnist":
             num_clients = 10
             for i in range(num_clients):
-                client = pFMeMoClient(client_id=i, dataset=dataset, model=model, local_epochs=local_epochs,
-                                      local_batch_size=local_batch_size, alpha=alpha, delta=delta, lr_p=lr_p, lr_l=lr_l)
+                client = pFMeMoClient(i, dataset, device, model, local_epochs, local_batch_size, alpha, delta, lr_p, lr_l)
                 server.add_client(client)
         server.global_train(f"{alpha}a_{delta}d_{lr_p}lp_{lr_l}ll")
 

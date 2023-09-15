@@ -9,13 +9,14 @@ from abc import ABC, abstractclassmethod
 from torch.utils.data import DataLoader, TensorDataset, random_split
 
 class BaseClient(ABC):
-    def __init__(self, client_id: int, dataset: str, model: nn.Module, local_epochs: int, local_batch_size: int):
+    def __init__(self, client_id: int, dataset: str, device: str, model: nn.Module, local_epochs: int, local_batch_size: int):
         self.client_id: int = client_id
         self.dataset: str = dataset
+        self.device: str = device
         self.local_epochs: int = local_epochs
         self.local_batch_size: int = local_batch_size
-        self.local_model = deepcopy(model)
-        self.personal_model = deepcopy(model)
+        self.local_model = deepcopy(model).to(self.device)
+        self.personal_model = deepcopy(model).to(self.device)
 
         data = torch.load(f'./data/{dataset}/data/client{client_id}/x.pt')
         labels = torch.load(f'./data/{dataset}/data/client{client_id}/y.pt')
@@ -45,13 +46,14 @@ class BaseClient(ABC):
         self.local_model.eval()
         with torch.no_grad():
             for inputs, labels in self.train_full_dataloader:
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.local_model(inputs)
                 loss = F.cross_entropy(outputs, labels)
                 losses.append(loss.item())
                 predictions = torch.argmax(outputs, dim=1)
                 correct_count = torch.sum(predictions == labels).item()
                 correct_counts += correct_count
-        return correct_counts, np.mean(losses), total_samples
+        return correct_counts.to("cpu"), np.mean(losses).to("cpu"), total_samples.to("cpu")
 
     def test_inform(self) -> tuple[int, int]:
         correct_counts = 0
@@ -59,11 +61,12 @@ class BaseClient(ABC):
         self.local_model.eval()
         with torch.no_grad():
             for inputs, labels in self.test_full_dataloader:
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.local_model(inputs)
                 predictions = torch.argmax(outputs, dim=1)
                 correct_count = torch.sum(predictions == labels).item()
                 correct_counts += correct_count
-        return correct_counts, total_samples
+        return correct_counts.to("cpu"), total_samples.to("cpu")
 
     def test_per_inform(self) -> tuple[int, int]:
         params_backup = deepcopy(self.local_model.state_dict())
@@ -73,19 +76,21 @@ class BaseClient(ABC):
         self.local_model.eval()
         with torch.no_grad():
             for inputs, labels in self.test_full_dataloader:
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.local_model(inputs)
                 predictions = torch.argmax(outputs, dim=1)
                 correct_count = torch.sum(predictions == labels).item()
                 correct_counts += correct_count
         self.set_model(params_backup)
-        return correct_counts, total_samples
+        return correct_counts.to("cpu"), total_samples.to("cpu")
 
 class BaseServer(ABC):
-    def __init__(self, algorithm: str, dataset: str, model: nn.Module, global_learning_rate: float,
+    def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, global_learning_rate: float,
                  selection_ratio: float, round: int):
         self.algorithm: str = algorithm
         self.dataset: str = dataset
-        self.global_model = model
+        self.device: str = device
+        self.global_model = model.to(self.device)
         self.global_learning_rate: float = global_learning_rate
         self.clients: list[BaseClient] = []
         self.selection_ratio: float = selection_ratio
@@ -169,12 +174,13 @@ class BaseServer(ABC):
         self.global_model.eval()
         with torch.no_grad():
             for inputs, labels in self.test_dataloader:
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.global_model(inputs)
                 predictions = torch.argmax(outputs, dim=1)
                 correct_count = torch.sum(predictions == labels).item()
                 correct_counts += correct_count
         accuracy = correct_counts / len(self.test_data)
-        self.global_accuracies.append(accuracy)
+        self.global_accuracies.append(accuracy.to("cpu"))
 
     def save_result(self, addition: str) -> None:
         result_data = {

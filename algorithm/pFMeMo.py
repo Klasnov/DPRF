@@ -1,13 +1,12 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from copy import deepcopy
 from .base import BaseClient, BaseServer
 
 
 class pFMeMoClient(BaseClient):
-    def __init__(self, client_id, dataset, model: nn.Module, local_epochs, local_batch_size, alpha, delta, lr_p, lr_l):
-        super().__init__(client_id, dataset, model, local_epochs, local_batch_size)
+    def __init__(self, client_id, dataset, device, model, local_epochs, local_batch_size, alpha, delta, lr_p, lr_l):
+        super().__init__(client_id, dataset, device, model, local_epochs, local_batch_size)
         self.global_model = deepcopy(list(model.parameters()))
         self.alpha: float = alpha
         self.delta: float = delta
@@ -21,6 +20,7 @@ class pFMeMoClient(BaseClient):
         self.personal_model.zero_grad()
         for i, (inputs, labels) in enumerate(self.train_dataloader):
             if i == batch_idx:
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.personal_model(inputs)
                 loss = F.cross_entropy(outputs, labels)
                 loss.backward()
@@ -41,7 +41,9 @@ class pFMeMoClient(BaseClient):
         return grads_local
 
     def update_per_model(self, batch_idx: int) -> None:
+        count = 0
         while True:
+            count += 1
             grad_h = self.calculate_grad_local(batch_idx)
             grad_h_cat: list[torch.Tensor] = []
             for g in grad_h:
@@ -54,26 +56,29 @@ class pFMeMoClient(BaseClient):
 
             for param_per, grad in zip(self.personal_model.parameters(), grad_h):
                 param_per.data -= self.lr_p * grad
+        print(f"count = {count}, norm = {norm}")
 
     def update_local_model(self) -> None:
         for param_local, param_per in zip(self.local_model.parameters(), self.personal_model.parameters()):
             param_local.data -= self.lr_l * self.alpha * (param_local - param_per)
 
     def local_train(self) -> None:
+        print(f"##### USER {self.client_id} START #####")
         self.local_update.clear()
         for i in range(self.local_epochs):
             self.update_per_model(batch_idx=i)
             self.update_local_model()
         for param_local, param_global in zip(self.local_model.parameters(), self.global_model):
             self.local_update.append((param_local - param_global) / self.local_epochs)
+        print(f"##### USER {self.client_id} END #####")
+        print()
     
     def get_update(self) -> list[torch.Tensor]:
         return self.local_update
 
 class pFMeMoServer(BaseServer):
-    def __init__(self, algorithm, dataset, model, lr_g, user_selection_ratio, round):
-        super().__init__(algorithm, dataset, model, lr_g, user_selection_ratio, round)
-        self.lamda = None
+    def __init__(self, algorithm, dataset, device, model, lr_g, user_selection_ratio, round):
+        super().__init__(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
     
     def calculate_weights(self) -> tuple[list[list[torch.Tensor]], torch.Tensor]:
         clients_selected: list[pFMeMoClient] = self.select_clients()
@@ -125,9 +130,11 @@ class pFMeMoServer(BaseServer):
         
         for global_param, global_update in zip(self.global_model.parameters(), global_updates):
             global_param.data += self.global_learning_rate * global_update
+        print(f"global update = {torch.mean(torch.cat(global_updates)).item()}")
 
     def global_train(self, save_name_addition: str) -> None:
-        for _ in range(self.round):
+        for i in range(self.round):
+            print(f"\n***** ROUND {i} *****")
             self.send_global_model()
             for client in self.clients:
                 client.local_train()
