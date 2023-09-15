@@ -59,19 +59,19 @@ def main():
     # print()
 
     # Hyperparameters (you need to tune these values)
-    lr_g = 0.01
+    lr_g = 1e-2
     user_selection_ratio = 0.3
-    round = 30
+    round = 100
     local_epochs = 5
     local_batch_size = 32
 
     if algorithm == "pFMeMo":
         server = pFMeMoServer(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
         
-        alpha = 0.5
-        delta = 10
-        lr_p = 0.001
-        lr_l = 0.01
+        alpha = 20
+        delta = 7.5
+        lr_p = 1e-2
+        lr_l = 1e-2
 
         if dataset == "mnist":
             num_clients = 10

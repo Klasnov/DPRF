@@ -36,7 +36,6 @@ class BaseClient(ABC):
         self.local_model = deepcopy(model).to(self.device)
         self.personal_model = deepcopy(model).to(self.device)
 
-        # Load and preprocess client-specific data
         data = torch.load(f'./data/{dataset}/data/client{client_id}/x.pt')
         labels = torch.load(f'./data/{dataset}/data/client{client_id}/y.pt')
         train_size = int(0.8 * len(data))
@@ -47,7 +46,6 @@ class BaseClient(ABC):
         self.test_data = test_dataset.dataset.tensors[0]
         self.test_labels = test_dataset.dataset.tensors[1]
 
-        # Create data loaders for training and testing
         self.train_dataloader = DataLoader(train_dataset, batch_size=local_batch_size, shuffle=True)
         self.test_dataloader = DataLoader(test_dataset, batch_size=local_batch_size, shuffle=False)
         self.train_full_dataloader = DataLoader(train_dataset, batch_size=len(train_dataset), shuffle=False)
@@ -74,6 +72,19 @@ class BaseClient(ABC):
         This method should be implemented in subclasses to define the specific training logic for the client.
         During local training, the client's local model should learn from its local dataset for a certain number
         of epochs (specified by self.local_epochs).
+        """
+        pass
+
+    @abstractclassmethod
+    def step_decay(self) -> None:
+        """
+        Abstract method for applying learning rate decay specific to the client.
+
+        Args:
+            - epoch (int): Current epoch during training.
+
+        This method should be implemented in subclasses to define the client-specific learning rate decay logic.
+        It allows clients to apply custom learning rate decay schedules.
         """
         pass
 
@@ -153,8 +164,9 @@ class BaseClient(ABC):
         self.set_model(params_backup)
         return (correct_counts / total_samples), total_samples
 
+
 class BaseServer(ABC):
-    def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, global_learning_rate: float,
+    def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_global: float,
                  selection_ratio: float, round: int):
         """
         Initializes a server object with the following parameters.
@@ -164,7 +176,7 @@ class BaseServer(ABC):
             - dataset (str): Name of the dataset used for federated learning.
             - device (str): Specifies the device on which the server runs, e.g., "cpu" or "cuda:0".
             - model (nn.Module): The global model used in federated learning, a PyTorch neural network model.
-            - global_learning_rate (float): Learning rate for global model updates.
+            - lr_global (float): Learning rate for global model updates.
             - selection_ratio (float): Ratio of selected clients for each communication round.
             - round (int): Current communication round number.
 
@@ -181,7 +193,8 @@ class BaseServer(ABC):
         self.dataset: str = dataset
         self.device: str = device
         self.global_model = model.to(self.device)
-        self.global_learning_rate: float = global_learning_rate
+        self.lr_global: float = lr_global
+        self.lr_global_init: float = lr_global
         self.clients: list[BaseClient] = []
         self.selection_ratio: float = selection_ratio
         self.round: int = round
@@ -252,6 +265,19 @@ class BaseServer(ABC):
 
         This method should be implemented in subclasses to define the logic for updating
         the global model based on the aggregated client updates obtained during global training.
+        """
+        pass
+
+    @abstractclassmethod
+    def global_decay(self) -> None:
+        """
+        Apply global learning rate decay for the server and the clients.
+
+        Args:
+            - epoch (int): Current epoch during training.
+
+        This method applies learning rate decay globally. It can be used to adjust the global
+        learning rate of both the server's and the clients'.
         """
         pass
 

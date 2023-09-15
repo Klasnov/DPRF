@@ -30,6 +30,8 @@ class pFMeMoClient(BaseClient):
         self.delta: float = delta
         self.lr_p: float = lr_p
         self.lr_l: float = lr_l
+        self.lr_p_init: float = lr_p
+        self.lr_l_init: float = lr_l
         self.local_update: list[torch.Tensor] = list()
 
     def calculate_grad_per(self, batch_idx: int) -> list[torch.Tensor]:
@@ -85,6 +87,7 @@ class pFMeMoClient(BaseClient):
         return grads_local
 
     def update_per_model(self, batch_idx: int) -> None:
+        # TODO: Adjust the calculation process.
         """
         Update the personal model with early stopping.
 
@@ -96,7 +99,8 @@ class pFMeMoClient(BaseClient):
         until the norm of the gradient falls below the given threshold (delta).
         """
         count = 0
-        while True:
+        norms = []
+        while count < 1e4:
             count += 1
             grad_h = self.calculate_grad_local(batch_idx)
             grad_h_cat: list[torch.Tensor] = []
@@ -105,11 +109,14 @@ class pFMeMoClient(BaseClient):
             grad_h_cat = torch.cat(grad_h_cat)
 
             norm = torch.norm(grad_h_cat)
-            if norm ** 2 <= self.delta ** 2:
+            norms.append(norm)
+            if norm <= self.delta:
                 break
 
             for param_per, grad in zip(self.personal_model.parameters(), grad_h):
                 param_per.data -= self.lr_p * grad
+        # print(f"count = {count} norm = {norm}")
+        print(f"norm = {torch.mean(torch.tensor(norms)).item()}")
 
     def update_local_model(self) -> None:
         """
@@ -133,6 +140,7 @@ class pFMeMoClient(BaseClient):
         updates the personal model with early stopping and incorporates regularization terms.
         After training, it calculates the updates made to the local model and stores them.
         """
+        print(f"# Client {self.client_id} Training...")
         self.local_update.clear()
         for i in range(self.local_epochs):
             self.update_per_model(batch_idx=i)
@@ -152,6 +160,20 @@ class pFMeMoClient(BaseClient):
         the local model and the global model.
         """
         return self.local_update
+    
+    def step_decay(self, epoch: int) -> None:
+        """
+        Apply exponential decay to self.delta, self.lr_p, and self.lr_l.
+
+        Args:
+            - epoch (int): Current epoch during training.
+
+        This method applies exponential decay to self.delta, self.lr_p, and self.lr_l based on the current epoch.
+        """
+        decay_factor = 0.95
+        self.lr_p = self.lr_p_init * (decay_factor ** epoch)
+        self.lr_l = self.lr_l_init * (decay_factor ** epoch)
+
 
 class pFMeMoServer(BaseServer):
     def __init__(self, algorithm, dataset, device, model, lr_g, user_selection_ratio, round):
@@ -171,6 +193,7 @@ class pFMeMoServer(BaseServer):
         device, global model, learning rate, client selection ratio, and communication rounds.
         """
         super().__init__(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
+        self.clients: list[pFMeMoClient] = []
     
     def calculate_weights(self) -> tuple[list[list[torch.Tensor]], torch.Tensor]:
         """
@@ -240,12 +263,27 @@ class pFMeMoServer(BaseServer):
                 global_update += client_update * weight
         
         for global_param, global_update in zip(self.global_model.parameters(), global_updates):
-            global_param.data += self.global_learning_rate * global_update
+            global_param.data += self.lr_global * global_update
         
         global_updates_flatten: list[torch.Tensor] = []
         for global_update in global_updates:
             global_updates_flatten.append(global_update.flatten())
         print(f"global update = {torch.mean(torch.cat(global_updates_flatten)).item()}")
+    
+    def global_decay(self, epoch: int) -> None:
+        """
+        Apply global learning rate decay for the server and the clients.
+
+        Args:
+            - epoch (int): Current epoch during training.
+
+        This method applies learning rate decay globally. It can be used to adjust the global
+        learning rate of both the server's and the clients'.
+        """
+        decay_factor = 0.95
+        self.lr_global = self.lr_global_init * (decay_factor ** epoch)
+        for client in self.clients:
+            client.step_decay(epoch)
 
     def global_train(self, save_name_addition: str) -> None:
         """
@@ -259,7 +297,7 @@ class pFMeMoServer(BaseServer):
         model performance, and saves the results.
         """
         for i in range(self.round):
-            print(f"\n***** ROUND {i} *****")
+            print(f"\n**********  ROUND {i}  **********")
             self.send_global_model()
             for client in self.clients:
                 client.local_train()
@@ -267,4 +305,7 @@ class pFMeMoServer(BaseServer):
             self.model_evaluate()
             self.model_per_evaluate()
             self.model_global_test()
+            if i % 10 == 0:
+                self.global_decay(i)
         self.save_result(save_name_addition)
+        self.save_model(save_name_addition)
