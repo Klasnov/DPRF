@@ -61,7 +61,7 @@ def main():
     # Hyperparameters (you need to tune these values)
     lr_g = 0.01
     user_selection_ratio = 0.3
-    round = 10
+    round = 30
     local_epochs = 5
     local_batch_size = 32
 
