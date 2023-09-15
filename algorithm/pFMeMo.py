@@ -1,203 +1,138 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+from copy import deepcopy
 from .base import BaseClient, BaseServer
 
 
 class pFMeMoClient(BaseClient):
     def __init__(self, client_id, dataset, model: nn.Module, local_epochs, local_batch_size, alpha, delta, lr_p, lr_l):
         super().__init__(client_id, dataset, model, local_epochs, local_batch_size)
-        self.alpha = alpha  # Regularization parameter for personalized updates
-        self.delta = delta  # Maximum squared norm of personalized update
-        self.lr_p = lr_p    # Learning rate for projected gradient descent
-        self.lr_l = lr_l    # Learning rate for local model updates
-        self.local_gradient = {}  # Store local gradients
+        self.global_model = deepcopy(list(model.parameters()))
+        self.alpha: float = alpha
+        self.delta: float = delta
+        self.lr_p: float = lr_p
+        self.lr_l: float = lr_l
+        self.local_update: list[torch.Tensor] = list()
 
-    def calculate_grad_estimate(self, theta_i, data_loader, batch_idx):
-        """
-        Calculate an estimate of the gradient of the loss with respect to 'theta_i'
-        using the provided data loader and considering only the 'batch_idx' batch.
-
-        Args:
-            theta_i (Tensor): Current parameter tensor 'theta_i'.
-            data_loader (DataLoader): Data loader for local training data.
-            batch_idx (int): Index of the batch to compute the gradient estimate for.
-
-        Returns:
-            Tensor: Estimated gradient of the loss with respect to 'theta_i'.
-        """
-        gradients = []
-        for i, (inputs, labels) in enumerate(data_loader):
-            if i == batch_idx:
-                self.local_model.zero_grad()
-                outputs = self.local_model(inputs)
-                loss = F.cross_entropy(outputs, labels)
-                loss.backward()
-                gradients.append(theta_i.grad.clone())
-        return torch.stack(gradients).mean(dim=0)
-
-    def calculate_h_i(self, theta_i, w_t_i, batch_idx):
-        """
-        Calculate the personalized gradient update 'tilde_h_i' for the given 'theta_i'
-        using the provided 'w_t_i' and considering only the 'batch_idx' batch.
-
-        Args:
-            theta_i (Tensor): Current parameter tensor 'theta_i'.
-            w_t_i (dict): State dictionary of the global model at time 't'.
-            batch_idx (int): Index of the batch to compute the personalized update for.
-
-        Returns:
-            Tensor: Personalized gradient update 'tilde_h_i' for 'theta_i'.
-        """
-        gradient_estimate = self.calculate_grad_estimate(theta_i, self.train_dataloader, batch_idx=batch_idx)
-        regularization_term = self.alpha * (theta_i - w_t_i)
-        return gradient_estimate + regularization_term
-
-    def update_theta_i(self, theta_i, w_t_i, batch_idx):
-        """
-        Update 'theta_i' using projected gradient descent based on personalized update.
-
-        Args:
-            theta_i (Tensor): Current parameter tensor 'theta_i'.
-            w_t_i (dict): State dictionary of the global model at time 't'.
-            batch_idx (int): Index of the batch to compute the personalized update for.
-
-        Returns:
-            Tensor: Updated 'theta_i' after projected gradient descent.
-        """
-        theta_i_updated = torch.cat([param.data.view(-1) for param in theta_i])
-        while True:
-            grad_tilde_h_i = self.calculate_h_i(theta_i_updated, w_t_i, batch_idx=batch_idx)
-            norm_grad_tilde_h_i = torch.norm(grad_tilde_h_i)
-            if norm_grad_tilde_h_i ** 2 <= self.delta:
-                break
-            theta_i_updated -= self.lr_p * grad_tilde_h_i
-        return theta_i_updated
-
-    def update_local_model(self, w_t_i, batch_idx):
-        """
-        Update the local model using personalized updates based on 'w_t_i'
-        for the given 'batch_idx' batch of local training data.
-
-        Args:
-            w_t_i (dict): State dictionary of the global model at time 't'.
-            batch_idx (int): Index of the batch to perform local model update on.
-        """
-        self.local_model.train()
+    def calculate_grad_per(self, batch_idx: int) -> list[torch.Tensor]:
+        grads: list[torch.Tensor] = []
+        self.personal_model.train()
+        self.personal_model.zero_grad()
         for i, (inputs, labels) in enumerate(self.train_dataloader):
             if i == batch_idx:
-                self.local_model.zero_grad()
-                outputs = self.local_model(inputs)
+                outputs = self.personal_model(inputs)
                 loss = F.cross_entropy(outputs, labels)
                 loss.backward()
-                grad_local = {name: self.alpha * (w_t_i[name] - param.grad) for name, param in
-                              self.local_model.named_parameters()}
-                self.local_model.parameters_update(grad_local, lr=self.lr_l)
+                for parm in self.personal_model.parameters():
+                    grads.append(parm.grad)
+        return grads
 
-    def local_train(self):
-        """
-        Perform local training using personalized updates over 'local_epochs'.
+    def calculate_grad_local(self, batch_idx: int) -> list[torch.Tensor]:
+        per_grads = self.calculate_grad_per(batch_idx)
+        regular_terms: list[torch.Tensor] = []
+        for param_local, param_theta in zip(self.local_model.parameters(), self.personal_model.parameters()):
+            regular_term = self.alpha * (param_theta - param_local)
+            regular_terms.append(regular_term)
+        grads_local: list[torch.Tensor] = []
+        for per_grad, regular_term in zip(per_grads, regular_terms):
+            grad_local = per_grad + regular_term
+            grads_local.append(grad_local)
+        return grads_local
 
-        Returns:
-            dict: Local gradient after local training.
-        """
-        w_t_i = self.local_model.state_dict()
-        theta_i = None
+    def update_per_model(self, batch_idx: int) -> None:
+        while True:
+            grad_h = self.calculate_grad_local(batch_idx)
+            grad_h_cat: list[torch.Tensor] = []
+            for g in grad_h:
+                grad_h_cat.append(g.flatten())
+            grad_h_cat = torch.cat(grad_h_cat)
+
+            norm = torch.norm(grad_h_cat)
+            if norm ** 2 <= self.delta ** 2:
+                break
+
+            for param_per, grad in zip(self.personal_model.parameters(), grad_h):
+                param_per.data -= self.lr_p * grad
+
+    def update_local_model(self) -> None:
+        for param_local, param_per in zip(self.local_model.parameters(), self.personal_model.parameters()):
+            param_local.data -= self.lr_l * self.alpha * (param_local - param_per)
+
+    def local_train(self) -> None:
+        self.local_update.clear()
         for i in range(self.local_epochs):
-            theta_i = self.update_theta_i(self.local_model.parameters(), w_t_i, batch_idx=i)
-            self.update_local_model(w_t_i, batch_idx=i)
-        self.personalized_model = theta_i.clone().detach()
-        for name, param in self.local_model.named_parameters():
-            self.local_gradient[name] = param.data - w_t_i[name]
+            self.update_per_model(batch_idx=i)
+            self.update_local_model()
+        for param_local, param_global in zip(self.local_model.parameters(), self.global_model):
+            self.local_update.append((param_local - param_global) / self.local_epochs)
     
-    def get_gradient(self):
-        """
-        Get the local gradients computed during local training.
-
-        Returns:
-            dict: A dictionary containing the local gradients of each parameter.
-        """
-        return self.local_gradient
+    def get_update(self) -> list[torch.Tensor]:
+        return self.local_update
 
 class pFMeMoServer(BaseServer):
     def __init__(self, algorithm, dataset, model, lr_g, user_selection_ratio, round):
-        """
-        Initialize the pFMeMoServer for federated learning using the pFMeMo algorithm.
-
-        Args:
-            algorithm (str): Algorithm name for identification.
-            dataset (str): Dataset name.
-            model (nn.Module): Global model for federated learning.
-            lr_g (float): Global learning rate for model aggregation.
-            user_selection_ratio (float): Ratio of users selected for model aggregation.
-            round (int): Total number of federated learning rounds.
-
-        Attributes:
-            clients_selected (list): List of selected participating clients for model aggregation.
-            gradients (list): List to store gradients received from selected clients.
-            lamda (np.array): Weight vector for gradient aggregation.
-        """
         super().__init__(algorithm, dataset, model, lr_g, user_selection_ratio, round)
-        self.clients_selected = None
-        self.gradients = None
         self.lamda = None
     
-    def calculate_lambda(self):
-        """
-        Calculate the weight vector 'lambda_t' using the provided gradients.
-        The weight vector is used to aggregate gradients from clients.
+    def calculate_weights(self) -> tuple[list[list[torch.Tensor]], torch.Tensor]:
+        clients_selected: list[pFMeMoClient] = self.select_clients()
+        updates: list[list[torch.Tensor]] = []
+        for client in clients_selected:
+            updates.append(client.get_update())
+        updates_flatten: list[torch.Tensor] = []
+        for update in updates:
+            update_flatten = []
+            for param_update in update:
+                update_flatten.append(param_update.flatten())
+            updates_flatten.append(torch.cat(update_flatten))
+        
+        norm_updates: list[torch.Tensor] = []
+        for update_flatten in updates_flatten:
+            norm = torch.norm(update_flatten, p=1)
+            if norm == 0:
+                zero_update = torch.zeros_like(update_flatten)
+                norm_updates.append(zero_update)
+            else:
+                norm_updates.append(update_flatten / norm)
+        norm_square_updates = [torch.norm(norm_grad, p=2) ** 2 for norm_grad in norm_updates]
+        num_nonzero = 0
+        for update in norm_square_updates:
+            if update != 0:
+                num_nonzero += 1
 
-        Returns:
-            None
-        """
-        self.gradients = []
-        for client in self.clients_selected:
-            self.gradients.append(client.get_gradient())
-        normalized_gradients = [grad / torch.norm(grad, p=2) for grad in self.gradients]
-        gradients_norm_squared = [torch.norm(grad, p=2) ** 2 for grad in normalized_gradients]
-        num_nonzero_norms = sum(1 for norm in gradients_norm_squared if norm != 0)
-        lambda_t = np.zeros(len(gradients_norm_squared))
-        if num_nonzero_norms >= 2:
-            for i, grad_norm_squared in enumerate(gradients_norm_squared):
-                if grad_norm_squared != 0:
-                    lambda_t[i] = 1 / grad_norm_squared
-            lambda_t /= lambda_t.sum()
+        weights = torch.zeros(len(clients_selected))
+        if num_nonzero >= 2:
+            for i in range(len(weights)):
+                if norm_square_updates[i] == 0:
+                    continue
+                sum = 0
+                for j in range(len(norm_square_updates)):
+                    if norm_square_updates[j] != 0 and j != i:
+                        sum += 1 / norm_square_updates[j]
+                weights[i] = (1 / norm_square_updates[i]) / sum
         else:
-            lambda_t = np.full(len(gradients_norm_squared), 1 / len(self.clients_selected))
-        self.lamda = lambda_t
+            for i in range(len(weights)):
+                weights[i] = 1 / len(clients_selected)
+        return updates, weights
 
-    def update_global_model(self):
-        """
-        Update the global model using personalized updates from clients' gradients.
-        The update is performed based on the pFMeMo algorithm.
+    def update_global_model(self) -> None:
+        clients_updates, weights = self.calculate_weights()
+        global_updates: list[torch.Tensor] = [torch.zeros_like(global_param) for global_param in self.global_model.parameters()]
+        for client_updates, weight in zip(clients_updates, weights):
+            for global_update, client_update in zip(global_updates, client_updates):
+                global_update += client_update * weight
+        
+        for global_param, global_update in zip(self.global_model.parameters(), global_updates):
+            global_param.data += self.global_learning_rate * global_update
 
-        Returns:
-            None
-        """
-        self.calculate_lambda()
-        global_gradient = np.zeros_like(self.gradients[0])
-        for i in range(len(self.clients)):
-            global_gradient += self.lamda[i] * self.gradients[i]
-        for param_name in global_gradient:
-            self.global_model.state_dict()[param_name] -= self.global_learning_rate * global_gradient[param_name]
-
-    def global_train(self):
-        """
-        Perform global training using the pFMeMo algorithm over multiple rounds.
-        Each round involves client local training, gradient aggregation, global model update,
-        and evaluation of model performance.
-
-        Returns:
-            None
-        """
+    def global_train(self, save_name_addition: str) -> None:
         for _ in range(self.round):
             self.send_global_model()
             for client in self.clients:
                 client.local_train()
-            self.clients_selected = self.select_clients()
             self.update_global_model()
             self.model_evaluate()
             self.model_per_evaluate()
             self.model_global_test()
-        self.save_result()
+        self.save_result(save_name_addition)
