@@ -1,8 +1,10 @@
 import torch
+from time import time
 from algorithm.pFMeMo import pFMeMoServer, pFMeMoClient
-from model.model import Minst_Model
+from model.util_models import Minst_Model
 
-def main():
+def main() -> None:
+    torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dataset = "mnist"
@@ -59,25 +61,27 @@ def main():
     # print()
 
     # Hyperparameters
-    lr_global = 1e-2
+    lr_global = 1e-3
     user_selection_ratio = 0.3
-    round = 1000
+    round = 800
     local_epochs = 20
-    local_batch_size = 32
+    local_batch_size = 64
 
     if algorithm == "pFMeMo":
+        alpha = 275
+        k = 9
+        lr_local = 1e-3
         server = pFMeMoServer(algorithm, dataset, device, model, lr_global, user_selection_ratio, round)
-        
-        alpha = 15
-        k = 5
-        lr_local = 1e-2
-
         if dataset == "mnist":
             num_clients = 10
             for i in range(num_clients):
                 client = pFMeMoClient(i, dataset, device, model, local_epochs, local_batch_size, alpha, k, lr_local)
                 server.add_client(client)
-        server.global_train(f"{alpha}a_{k}k_{lr_local}ll")
+        server.global_train(f"{local_epochs}epc_{local_batch_size}bch_{alpha}a_{k}k_{lr_local}ll")
 
 if __name__ == "__main__":
+    start_time = time()
     main()
+    end_time = time()
+    print(f"\nThe totla training time is {end_time - start_time}s.")
+

@@ -30,7 +30,6 @@ class pFMeMoClient(BaseClient):
         self.alpha: float = alpha
         self.k: int = k
         self.lr_local: float = lr_local
-        self.lr_local_init: float = lr_local
         self.local_update: list[torch.Tensor] = list()
 
     def calculate_grad_per(self, batch_idx: int) -> list[torch.Tensor]:
@@ -124,18 +123,6 @@ class pFMeMoClient(BaseClient):
         the local model and the global model.
         """
         return self.local_update
-    
-    def step_decay(self, epoch: int) -> None:
-        """
-        Apply exponential decay to self.lr_local.
-
-        Args:
-            - epoch (int): Current epoch during training.
-
-        This method applies exponential decay to self.lr_local based on the current epoch.
-        """
-        decay_factor = 0.95
-        self.lr_local = self.lr_local_init * (decay_factor ** epoch)
 
 
 class pFMeMoServer(BaseServer):
@@ -231,21 +218,6 @@ class pFMeMoServer(BaseServer):
         global_updates_flatten: list[torch.Tensor] = []
         for global_update in global_updates:
             global_updates_flatten.append(global_update.flatten())
-    
-    def global_decay(self, epoch: int) -> None:
-        """
-        Apply global learning rate decay for the server and the clients.
-
-        Args:
-            - epoch (int): Current epoch during training.
-
-        This method applies learning rate decay globally. It can be used to adjust the global
-        learning rate of both the server's and the clients'.
-        """
-        decay_factor = 0.95
-        self.lr_global = self.lr_global_init * (decay_factor ** epoch)
-        for client in self.clients:
-            client.step_decay(epoch)
 
     def global_train(self, save_name_addition: str) -> None:
         """
@@ -266,12 +238,13 @@ class pFMeMoServer(BaseServer):
             self.model_evaluate()
             self.model_per_evaluate()
             self.model_global_test()
-            if i % 10 == 0:
-                self.global_decay(i)
-            print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) / self.round))
-            print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
-            print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
-            print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
-            print()
+
+            if (i + 1) % 10 == 0:
+                print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
+                print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
+                print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
+                print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
+                print()
+
         self.save_result(save_name_addition)
         self.save_model(save_name_addition)

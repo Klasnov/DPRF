@@ -75,19 +75,6 @@ class BaseClient(ABC):
         """
         pass
 
-    @abstractclassmethod
-    def step_decay(self) -> None:
-        """
-        Abstract method for applying learning rate decay specific to the client.
-
-        Args:
-            - epoch (int): Current epoch during training.
-
-        This method should be implemented in subclasses to define the client-specific learning rate decay logic.
-        It allows clients to apply custom learning rate decay schedules.
-        """
-        pass
-
     def train_inform(self) -> tuple[int, float, int]:
         """
         Calculates training statistics for the client's local model.
@@ -194,7 +181,6 @@ class BaseServer(ABC):
         self.device: str = device
         self.global_model = model.to(self.device)
         self.lr_global: float = lr_global
-        self.lr_global_init: float = lr_global
         self.clients: list[BaseClient] = []
         self.selection_ratio: float = selection_ratio
         self.round: int = round
@@ -265,19 +251,6 @@ class BaseServer(ABC):
 
         This method should be implemented in subclasses to define the logic for updating
         the global model based on the aggregated client updates obtained during global training.
-        """
-        pass
-
-    @abstractclassmethod
-    def global_decay(self) -> None:
-        """
-        Apply global learning rate decay for the server and the clients.
-
-        Args:
-            - epoch (int): Current epoch during training.
-
-        This method applies learning rate decay globally. It can be used to adjust the global
-        learning rate of both the server's and the clients'.
         """
         pass
 
@@ -377,7 +350,7 @@ class BaseServer(ABC):
         result_dir = f"./result/{self.algorithm}"
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
-        result_file = f"{result_dir}/{self.dataset}d_{self.round}r_{addition}.csv"
+        result_file = f"{result_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg_{addition}.csv"
         result_df.to_csv(result_file, index=False)
     
     def save_model(self, addition: str) -> None:
@@ -393,7 +366,7 @@ class BaseServer(ABC):
         model_dir = f"./model/{self.algorithm}"
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
-        model_path = f"{model_dir}/{self.dataset}d_{self.round}r_{addition}.pt"
+        model_path = f"{model_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg_{addition}.pt"
         torch.save(self.global_model.state_dict(), model_path)
     
     def load_model(self, model_path) -> None:
