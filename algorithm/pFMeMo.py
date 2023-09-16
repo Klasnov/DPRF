@@ -1,11 +1,13 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from copy import deepcopy
 from .base import BaseClient, BaseServer
 
 
 class pFMeMoClient(BaseClient):
-    def __init__(self, client_id, dataset, device, model, local_epochs, local_batch_size, alpha, delta, lr_p, lr_l):
+    def __init__(self, client_id: int, dataset: str, device: str, model: nn.Module, local_epochs: int,
+                 local_batch_size: int, alpha: float, k: int, lr_local: float):
         """
         Initializes a pFMeMoClient instance for personalized federated learning.
 
@@ -17,9 +19,8 @@ class pFMeMoClient(BaseClient):
             - local_epochs (int): Number of local training epochs per round.
             - local_batch_size (int): Batch size for local training.
             - alpha (float): Weighting factor for regularization between global and personal models.
-            - delta (float): Threshold for early stopping in local model updates.
-            - lr_p (float): Learning rate for personal model updates.
-            - lr_l (float): Learning rate for local model updates.
+            - K (int): Threshold for early stopping in local model updates.
+            - lr_local (float): Learning rate for local updates.
 
         This constructor initializes a pFMeMoClient object with the specified parameters.
         It sets up client-specific properties and initializes personal and global models.
@@ -27,11 +28,9 @@ class pFMeMoClient(BaseClient):
         super().__init__(client_id, dataset, device, model, local_epochs, local_batch_size)
         self.global_model = deepcopy(list(model.parameters()))
         self.alpha: float = alpha
-        self.delta: float = delta
-        self.lr_p: float = lr_p
-        self.lr_l: float = lr_l
-        self.lr_p_init: float = lr_p
-        self.lr_l_init: float = lr_l
+        self.k: int = k
+        self.lr_local: float = lr_local
+        self.lr_local_init: float = lr_local
         self.local_update: list[torch.Tensor] = list()
 
     def calculate_grad_per(self, batch_idx: int) -> list[torch.Tensor]:
@@ -87,50 +86,16 @@ class pFMeMoClient(BaseClient):
         return grads_local
 
     def update_per_model(self, batch_idx: int) -> None:
-        # TODO: Adjust the calculation process.
-        """
-        Update the personal model with early stopping.
-
-        Args:
-            - batch_idx (int): Index of the batch for which updates are performed.
-
-        This method updates the personal model with early stopping based on the specified batch index.
-        It iteratively calculates the local gradients and updates the personal model parameters
-        until the norm of the gradient falls below the given threshold (delta).
-        """
         count = 0
-        norms = []
-        while count < 1e4:
+        while count < self.k:
             count += 1
             grad_h = self.calculate_grad_local(batch_idx)
-            grad_h_cat: list[torch.Tensor] = []
-            for g in grad_h:
-                grad_h_cat.append(g.flatten())
-            grad_h_cat = torch.cat(grad_h_cat)
-
-            norm = torch.norm(grad_h_cat)
-            norms.append(norm)
-            if norm <= self.delta:
-                break
-
             for param_per, grad in zip(self.personal_model.parameters(), grad_h):
-                param_per.data -= self.lr_p * grad
-        # print(f"count = {count} norm = {norm}")
-        print(f"norm = {torch.mean(torch.tensor(norms)).item()}")
+                param_per.data -= self.lr_local * grad
 
     def update_local_model(self) -> None:
-        """
-        Update the personal model with early stopping.
-
-        Args:
-            - batch_idx (int): Index of the batch for which updates are performed.
-
-        This method updates the personal model with early stopping based on the specified batch index.
-        It iteratively calculates the local gradients and updates the personal model parameters
-        until the norm of the gradient falls below the given threshold (delta).
-        """
         for param_local, param_per in zip(self.local_model.parameters(), self.personal_model.parameters()):
-            param_local.data -= self.lr_l * self.alpha * (param_local - param_per)
+            param_local.data -= self.lr_local * self.alpha * (param_local - param_per)
 
     def local_train(self) -> None:
         """
@@ -140,7 +105,6 @@ class pFMeMoClient(BaseClient):
         updates the personal model with early stopping and incorporates regularization terms.
         After training, it calculates the updates made to the local model and stores them.
         """
-        print(f"# Client {self.client_id} Training...")
         self.local_update.clear()
         for i in range(self.local_epochs):
             self.update_per_model(batch_idx=i)
@@ -163,16 +127,15 @@ class pFMeMoClient(BaseClient):
     
     def step_decay(self, epoch: int) -> None:
         """
-        Apply exponential decay to self.delta, self.lr_p, and self.lr_l.
+        Apply exponential decay to self.lr_local.
 
         Args:
             - epoch (int): Current epoch during training.
 
-        This method applies exponential decay to self.delta, self.lr_p, and self.lr_l based on the current epoch.
+        This method applies exponential decay to self.lr_local based on the current epoch.
         """
         decay_factor = 0.95
-        self.lr_p = self.lr_p_init * (decay_factor ** epoch)
-        self.lr_l = self.lr_l_init * (decay_factor ** epoch)
+        self.lr_local = self.lr_local_init * (decay_factor ** epoch)
 
 
 class pFMeMoServer(BaseServer):
@@ -268,7 +231,6 @@ class pFMeMoServer(BaseServer):
         global_updates_flatten: list[torch.Tensor] = []
         for global_update in global_updates:
             global_updates_flatten.append(global_update.flatten())
-        print(f"global update = {torch.mean(torch.cat(global_updates_flatten)).item()}")
     
     def global_decay(self, epoch: int) -> None:
         """
@@ -296,8 +258,12 @@ class pFMeMoServer(BaseServer):
         It iteratively communicates with selected clients, updates the global model, evaluates
         model performance, and saves the results.
         """
+        print("********  TOTAL ROUND %d  ********" % (self.round))
         for i in range(self.round):
-            print(f"\n**********  ROUND {i}  **********")
+
+            if (i + 1) % 10 == 0:
+                print("# Round %d (%.3f%%)" % ((i + 1), (i + 1) / self.round))
+            
             self.send_global_model()
             for client in self.clients:
                 client.local_train()

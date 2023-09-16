@@ -58,27 +58,26 @@ def main():
     #         print()
     # print()
 
-    # Hyperparameters (you need to tune these values)
-    lr_g = 1e-2
+    # Hyperparameters
+    lr_global = 1e-2
     user_selection_ratio = 0.3
-    round = 100
+    round = 1000
     local_epochs = 5
     local_batch_size = 32
 
     if algorithm == "pFMeMo":
-        server = pFMeMoServer(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
+        server = pFMeMoServer(algorithm, dataset, device, model, lr_global, user_selection_ratio, round)
         
         alpha = 20
-        delta = 7.5
-        lr_p = 1e-2
-        lr_l = 1e-2
+        k = 5
+        lr_local = 1e-2
 
         if dataset == "mnist":
             num_clients = 10
             for i in range(num_clients):
-                client = pFMeMoClient(i, dataset, device, model, local_epochs, local_batch_size, alpha, delta, lr_p, lr_l)
+                client = pFMeMoClient(i, dataset, device, model, local_epochs, local_batch_size, alpha, k, lr_local)
                 server.add_client(client)
-        server.global_train(f"{alpha}a_{delta}d_{lr_p}lp_{lr_l}ll")
+        server.global_train(f"{alpha}a_{k}k_{lr_local}ll")
 
 if __name__ == "__main__":
     main()
