@@ -62,13 +62,13 @@ def main():
     lr_global = 1e-2
     user_selection_ratio = 0.3
     round = 1000
-    local_epochs = 5
+    local_epochs = 20
     local_batch_size = 32
 
     if algorithm == "pFMeMo":
         server = pFMeMoServer(algorithm, dataset, device, model, lr_global, user_selection_ratio, round)
         
-        alpha = 20
+        alpha = 15
         k = 5
         lr_local = 1e-2
 

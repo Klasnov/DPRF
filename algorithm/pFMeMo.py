@@ -258,12 +258,7 @@ class pFMeMoServer(BaseServer):
         It iteratively communicates with selected clients, updates the global model, evaluates
         model performance, and saves the results.
         """
-        print("********  TOTAL ROUND %d  ********" % (self.round))
         for i in range(self.round):
-
-            if (i + 1) % 10 == 0:
-                print("# Round %d (%.3f%%)" % ((i + 1), (i + 1) / self.round))
-            
             self.send_global_model()
             for client in self.clients:
                 client.local_train()
@@ -273,5 +268,10 @@ class pFMeMoServer(BaseServer):
             self.model_global_test()
             if i % 10 == 0:
                 self.global_decay(i)
+            print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) / self.round))
+            print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
+            print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
+            print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
+            print()
         self.save_result(save_name_addition)
         self.save_model(save_name_addition)
