@@ -1,7 +1,8 @@
 import torch
 from time import time
 from algorithm.pFMeMo import pFMeMoServer, pFMeMoClient
-from model.util_models import Minst_Model
+from algorithm.pFedMe import pFedMeClient, pFedMeServer
+from utils.util_models import Minst_Model
 
 def main() -> None:
     torch.manual_seed(0)
@@ -13,6 +14,8 @@ def main() -> None:
     # print("Welcome to Personalized Federated Learning Program!")
     # print("Please follow the prompts to select the dataset and algorithm for training.")
     # print()
+
+    # TODO: 完成用户选择模型本地导入的情况
 
     # # Dataset selection
     # while True:
@@ -77,11 +80,16 @@ def main() -> None:
             for i in range(num_clients):
                 client = pFMeMoClient(i, dataset, device, model, local_epochs, local_batch_size, alpha, k, lr_local)
                 server.add_client(client)
-        server.global_train(f"{local_epochs}epc_{local_batch_size}bch_{alpha}a_{k}k_{lr_local}ll")
+        server.global_train()
+        server.save_result(f"{local_epochs}epc_{local_batch_size}bch_{alpha}a_{k}k_{lr_local}ll")
+        server.save_model(f"{local_epochs}epc_{local_batch_size}bch_{alpha}a_{k}k_{lr_local}ll")
+    
+    elif algorithm == "pFedMe":
+        server = pFedMeServer(algorithm)
+
 
 if __name__ == "__main__":
     start_time = time()
     main()
     end_time = time()
     print(f"\nThe totla training time is {end_time - start_time}s.")
-

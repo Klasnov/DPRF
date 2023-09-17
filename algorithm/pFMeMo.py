@@ -6,13 +6,14 @@ from .base import BaseClient, BaseServer
 
 
 class pFMeMoClient(BaseClient):
-    def __init__(self, client_id: int, dataset: str, device: str, model: nn.Module, local_epochs: int,
-                 local_batch_size: int, alpha: float, k: int, lr_local: float):
+    def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
+                 local_epochs: int, local_batch_size: int, lr_local: float, alpha: float, k: int):
         """
         Initializes a pFMeMoClient instance for personalized federated learning.
 
         Args:
             - client_id (int): Unique identifier for the client.
+            - algorithm (str): Name of the federated learning algorithm.
             - dataset (str): Name of the dataset used for training.
             - device (str): Device ('cuda' or 'cpu') on which the client operates.
             - model (nn.Module): The deep learning model used by the client.
@@ -20,16 +21,14 @@ class pFMeMoClient(BaseClient):
             - local_batch_size (int): Batch size for local training.
             - alpha (float): Weighting factor for regularization between global and personal models.
             - K (int): Threshold for early stopping in local model updates.
-            - lr_local (float): Learning rate for local updates.
 
         This constructor initializes a pFMeMoClient object with the specified parameters.
         It sets up client-specific properties and initializes personal and global models.
         """
-        super().__init__(client_id, dataset, device, model, local_epochs, local_batch_size)
+        super().__init__(client_id, algorithm, dataset, device, model, local_epochs, local_batch_size, lr_local)
         self.global_model = deepcopy(list(model.parameters()))
         self.alpha: float = alpha
         self.k: int = k
-        self.lr_local: float = lr_local
         self.local_update: list[torch.Tensor] = list()
 
     def calculate_grad_per(self, batch_idx: int) -> list[torch.Tensor]:
@@ -126,7 +125,8 @@ class pFMeMoClient(BaseClient):
 
 
 class pFMeMoServer(BaseServer):
-    def __init__(self, algorithm, dataset, device, model, lr_g, user_selection_ratio, round):
+    def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_g: float,
+                 user_selection_ratio: float, round: int):
         """
         Initialize the pFMeMoServer.
 
@@ -218,33 +218,3 @@ class pFMeMoServer(BaseServer):
         global_updates_flatten: list[torch.Tensor] = []
         for global_update in global_updates:
             global_updates_flatten.append(global_update.flatten())
-
-    def global_train(self, save_name_addition: str) -> None:
-        """
-        Perform global training rounds in the federated learning process.
-
-        Args:
-            save_name_addition (str): An additional string identifier for result saving.
-
-        This method performs multiple rounds of global training in the federated learning process.
-        It iteratively communicates with selected clients, updates the global model, evaluates
-        model performance, and saves the results.
-        """
-        for i in range(self.round):
-            self.send_global_model()
-            for client in self.clients:
-                client.local_train()
-            self.update_global_model()
-            self.model_evaluate()
-            self.model_per_evaluate()
-            self.model_global_test()
-
-            if (i + 1) % 10 == 0:
-                print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
-                print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
-                print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
-                print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
-                print()
-
-        self.save_result(save_name_addition)
-        self.save_model(save_name_addition)

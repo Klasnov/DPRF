@@ -6,14 +6,12 @@ from .base import BaseClient, BaseServer
 
 
 class pFedMeClient(BaseClient):
-    def __init__(self, client_id: int, dataset: str, device: str, model: nn.Module, local_epochs: int,
-                 local_batch_size: int, delta: float, k: int, lr_local: float):
-        super().__init__(client_id, dataset, device, model, local_epochs, local_batch_size)
+    def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
+                 local_epochs: int, local_batch_size: int, lamda: float, k: int, lr_local: float):
+        super().__init__(client_id, algorithm, dataset, device, model, local_epochs, local_batch_size, lr_local)
         self.global_model = deepcopy(list(model.parameters()))
-        self.delta: float = delta
+        self.lamda: float = lamda
         self.k: int = k
-        self.lr_local: float = lr_local
-        self.local_update: list[torch.Tensor] = list()
 
     def calculate_grad_per(self, batch_idx: int) -> list[torch.Tensor]:
         grads: list[torch.Tensor] = []
@@ -34,7 +32,7 @@ class pFedMeClient(BaseClient):
         per_grads = self.calculate_grad_per(batch_idx)
         regular_terms: list[torch.Tensor] = []
         for param_local, param_theta in zip(self.local_model.parameters(), self.personal_model.parameters()):
-            regular_term = self.delta * (param_theta - param_local)
+            regular_term = self.lamda * (param_theta - param_local)
             regular_terms.append(regular_term)
         grads_local: list[torch.Tensor] = []
         for per_grad, regular_term in zip(per_grads, regular_terms):
@@ -52,79 +50,27 @@ class pFedMeClient(BaseClient):
 
     def update_local_model(self) -> None:
         for param_local, param_per in zip(self.local_model.parameters(), self.personal_model.parameters()):
-            param_local.data -= self.lr_local * self.delta * (param_local - param_per)
+            param_local.data -= self.lr_local * self.lamda * (param_local - param_per)
 
     def local_train(self) -> None:
         self.local_update.clear()
         for i in range(self.local_epochs):
             self.update_per_model(batch_idx=i)
             self.update_local_model()
-        for param_local, param_global in zip(self.local_model.parameters(), self.global_model):
-            self.local_update.append((param_local - param_global) / self.local_epochs)
     
-    def get_update(self) -> list[torch.Tensor]:
-        return self.local_update
+    def get_local_model(self) -> nn.Module:
+        return self.local_model
 
 
 class pFedMeServer(BaseServer):
-    def __init__(self, algorithm, dataset, device, model, lr_g, user_selection_ratio, round):
+    def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_g: float,
+                 user_selection_ratio: float, round: int, beta: float):
         super().__init__(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
         self.clients: list[pFedMeClient] = []
-    
-    def calculate_weights(self) -> tuple[list[list[torch.Tensor]], torch.Tensor]:
-        clients_selected: list[pFedMeClient] = self.select_clients()
-        updates: list[list[torch.Tensor]] = []
-        for client in clients_selected:
-            updates.append(client.get_update())
-        updates_flatten: list[torch.Tensor] = []
-        for update in updates:
-            update_flatten = []
-            for param_update in update:
-                update_flatten.append(param_update.flatten())
-            updates_flatten.append(torch.cat(update_flatten))
-        
-        norm_updates: list[torch.Tensor] = []
-        for update_flatten in updates_flatten:
-            norm = torch.norm(update_flatten, p=1)
-            if norm == 0:
-                zero_update = torch.zeros_like(update_flatten)
-                norm_updates.append(zero_update)
-            else:
-                norm_updates.append(update_flatten / norm)
-        norm_square_updates = [torch.norm(norm_grad, p=2) ** 2 for norm_grad in norm_updates]
-        num_nonzero = 0
-        for update in norm_square_updates:
-            if update != 0:
-                num_nonzero += 1
-
-        weights = torch.zeros(len(clients_selected))
-        if num_nonzero >= 2:
-            for i in range(len(weights)):
-                if norm_square_updates[i] == 0:
-                    continue
-                sum = 0
-                for j in range(len(norm_square_updates)):
-                    if norm_square_updates[j] != 0 and j != i:
-                        sum += 1 / norm_square_updates[j]
-                weights[i] = (1 / norm_square_updates[i]) / sum
-        else:
-            for i in range(len(weights)):
-                weights[i] = 1 / len(clients_selected)
-        return updates, weights
+        self.beta = beta
 
     def update_global_model(self) -> None:
-        clients_updates, weights = self.calculate_weights()
-        global_updates: list[torch.Tensor] = [torch.zeros_like(global_param) for global_param in self.global_model.parameters()]
-        for client_updates, weight in zip(clients_updates, weights):
-            for global_update, client_update in zip(global_updates, client_updates):
-                global_update += client_update * weight
-        
-        for global_param, global_update in zip(self.global_model.parameters(), global_updates):
-            global_param.data += self.lr_global * global_update
-        
-        global_updates_flatten: list[torch.Tensor] = []
-        for global_update in global_updates:
-            global_updates_flatten.append(global_update.flatten())
+        pass
 
     def global_train(self, save_name_addition: str) -> None:
         for i in range(self.round):
@@ -136,11 +82,11 @@ class pFedMeServer(BaseServer):
             self.model_per_evaluate()
             self.model_global_test()
 
-            # print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
-            # print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
-            # print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
-            # print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
-            # print()
+            print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
+            print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
+            print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
+            print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
+            print()
 
         self.save_result(save_name_addition)
         # self.save_model(save_name_addition)

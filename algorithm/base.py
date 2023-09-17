@@ -9,17 +9,20 @@ from abc import ABC, abstractclassmethod
 from torch.utils.data import DataLoader, TensorDataset, random_split
 
 class BaseClient(ABC):
-    def __init__(self, client_id: int, dataset: str, device: str, model: nn.Module, local_epochs: int, local_batch_size: int):
+    def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
+                 local_epochs: int, local_batch_size: int, lr_local:float):
         """
         Initializes a client object with the following parameters.
 
         Args:
             - client_id (int): Unique identifier for the client.
+            - algorithm (str): Name of the federated learning algorithm.
             - dataset (str): Name of the dataset used by the client.
             - device (str): Specifies the device on which the client runs, e.g., "cpu" or "cuda".
             - model (nn.Module): The client's local model, a PyTorch neural network model.
             - local_epochs (int): Number of local training epochs for the client.
             - local_batch_size (int): Batch size for local training.
+            - lr_local (float): Learning rate for local updates.
         
         This constructor performs the following actions:
             1. Initializes client attributes such as client_id, dataset, device, and local training parameters.
@@ -29,10 +32,12 @@ class BaseClient(ABC):
             5. Creates data loaders for training and testing.
         """
         self.client_id: int = client_id
+        self.algorithm: str = algorithm
         self.dataset: str = dataset
         self.device: str = device
         self.local_epochs: int = local_epochs
         self.local_batch_size: int = local_batch_size
+        self.lr_local: float = lr_local
         self.local_model = deepcopy(model).to(self.device)
         self.personal_model = deepcopy(model).to(self.device)
 
@@ -150,6 +155,42 @@ class BaseClient(ABC):
                 correct_counts += torch.sum(predictions == labels).item()
         self.set_model(params_backup)
         return (correct_counts / total_samples), total_samples
+    
+    def save_local_model(self, addition: str) -> None:
+        """
+        Saves the local model's state dictionary to a file.
+
+        Args:
+            - addition (str): A custom addition to the filename for model identification.
+
+        This method saves the state dictionary of the client's local model to a file 
+        in a directory specific to the client. The model is saved in PyTorch format (.pt).
+        """
+        model_dir = f"./model/{self.algorithm}/clients"
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+        model_path = f"{model_dir}/{self.client_id}id_{self.lr_local}ll_{self.local_epochs}epc"
+        model_path = f"{model_path}_{self.local_batch_size}bch_{addition}_local.pt"
+        torch.save(self.local_model.state_dict(), model_path)
+    
+    def save_personal_model(self, addition: str) -> None:
+        """
+        Saves the personal model's state dictionary to a file.
+
+        Args:
+            - addition (str): A custom addition to the filename for model identification.
+
+        This method saves the state dictionary of the client's personal model to a file
+        in a directory specific to the client. The model is saved in PyTorch format (.pt). 
+        """
+        model_dir = f"./model/{self.algorithm}/clients"
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+        model_path = f"{model_dir}/{self.client_id}id_{self.lr_local}ll_{self.local_epochs}epc"
+        model_path = f"{model_path}_{self.local_batch_size}bch_{addition}_personal.pt"
+        torch.save(self.personal_model.state_dict(), model_path)
+    
+    # TODO: 完成客户端指定路径本地模型和个性化模型的加载
 
 
 class BaseServer(ABC):
@@ -232,17 +273,6 @@ class BaseServer(ABC):
             return self.clients
         selected_users = np.random.choice(self.clients, num_selected_users, replace=False)
         return list(selected_users)
-    
-    @abstractclassmethod
-    def global_train(self) -> None:
-        """
-        Abstract method for performing global model training using client updates.
-
-        This method should be implemented in subclasses to define the logic for aggregating
-        client updates and updating the global model. During global training, the server
-        collects client updates, aggregates them, and updates the global model accordingly.
-        """
-        pass
 
     @abstractclassmethod
     def update_global_model(self) -> None:
@@ -353,12 +383,13 @@ class BaseServer(ABC):
         result_file = f"{result_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg_{addition}.csv"
         result_df.to_csv(result_file, index=False)
     
-    def save_model(self, addition: str) -> None:
+    def save_model(self, server_addition: str, client_addition: str) -> None:
         """
         Saves the global model's state dictionary to a file.
 
         Args:
-            - addition (str): A custom addition to the filename for model identification.
+            - server_addition (str): A custom addition to the filename for server's model identification.
+            - client_addition (str): A custom addition to the filename for client's model identification.
 
         This method saves the state dictionary of the global model to a file in a directory specific to
         the algorithm and dataset used in federated learning. The model is saved in PyTorch format (.pt).
@@ -366,10 +397,13 @@ class BaseServer(ABC):
         model_dir = f"./model/{self.algorithm}"
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
-        model_path = f"{model_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg_{addition}.pt"
+        model_path = f"{model_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg_{server_addition}.pt"
         torch.save(self.global_model.state_dict(), model_path)
+        for client in self.clients:
+            client.save_local_model(client_addition)
+            client.save_personal_model(client_addition)
     
-    def load_model(self, model_path) -> None:
+    def load_model(self, server_model_path) -> None:
         """
         Loads a global model's state dictionary from a file.
 
@@ -379,9 +413,30 @@ class BaseServer(ABC):
         This method loads a global model's state dictionary from a specified file. It performs checks to ensure
         that the file exists and is in the correct PyTorch format (.pt) before loading the model weights.
         """
-        if not os.path.exists(model_path):
-            raise ValueError(f"Model path {model_path} does not exist.")
-        if not model_path.endswith(".pt"):
-            raise ValueError(f"{model_path} is not a pytorch model file (.pt)")
-        state_dict = torch.load(model_path)
-        self.global_model.load_state_dict(state_dict)
+        if not os.path.exists(server_model_path):
+            raise ValueError(f"Model path {server_model_path} does not exist.")
+        server_state_dict = torch.load(server_model_path)
+        self.global_model.load_state_dict(server_state_dict)
+        # TODO: 完成客户端的模型加载
+    
+    def global_train(self) -> None:
+        """
+        Perform global training rounds in the federated learning process.
+
+        This method performs multiple rounds of global training in the federated learning process.
+        It iteratively communicates with selected clients, updates the global model, evaluates model performance.
+        """
+        for i in range(self.round):
+            self.send_global_model()
+            for client in self.clients:
+                client.local_train()
+            self.update_global_model()
+            self.model_evaluate()
+            self.model_per_evaluate()
+            self.model_global_test()
+            if (i + 1) % 10 == 0:
+                print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
+                print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
+                print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
+                print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
+                print()
