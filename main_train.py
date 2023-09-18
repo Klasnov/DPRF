@@ -15,8 +15,6 @@ def main() -> None:
     # print("Please follow the prompts to select the dataset and algorithm for training.")
     # print()
 
-    # TODO: 完成用户选择模型本地导入的情况
-
     # # Dataset selection
     # while True:
     #     print("Select the dataset.")
@@ -64,28 +62,28 @@ def main() -> None:
     # print()
 
     # Hyperparameters
-    lr_global = 1e-3
-    user_selection_ratio = 0.3
-    round = 800
-    local_epochs = 20
-    local_batch_size = 64
+    SELECT_RATIO = 0.3
+    ROUND_NUM = 2
+    LOCAL_EPOCH = 20
+    LOCAL_BATCH_SIZE = 64
+    LR_GLOBAL = 1e-3
+    LR_LOCAL = 1e-3
 
     if algorithm == "pFMeMo":
-        alpha = 275
-        k = 9
-        lr_local = 1e-3
-        server = pFMeMoServer(algorithm, dataset, device, model, lr_global, user_selection_ratio, round)
+        ALPHA = 275
+        K = 9
+        server = pFMeMoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         if dataset == "mnist":
-            num_clients = 10
-            for i in range(num_clients):
-                client = pFMeMoClient(i, dataset, device, model, local_epochs, local_batch_size, alpha, k, lr_local)
-                server.add_client(client)
+            CLIENT_NUM = 10
+            for i in range(CLIENT_NUM):
+                server.add_client(pFMeMoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL, ALPHA, K))
+        # server.load_model(client_addition=f"_{ALPHA}a_{K}k")
         server.global_train()
-        server.save_result(f"{local_epochs}epc_{local_batch_size}bch_{alpha}a_{k}k_{lr_local}ll")
-        server.save_model(f"{local_epochs}epc_{local_batch_size}bch_{alpha}a_{k}k_{lr_local}ll")
+        server.save_result(client_addition=f"_{ALPHA}a_{K}k")
+        # server.save_model(client_addition=f"_{ALPHA}a_{K}k")
     
     elif algorithm == "pFedMe":
-        server = pFedMeServer(algorithm)
+        pass
 
 
 if __name__ == "__main__":
@@ -93,3 +91,4 @@ if __name__ == "__main__":
     main()
     end_time = time()
     print(f"\nThe totla training time is {end_time - start_time}s.")
+    print()

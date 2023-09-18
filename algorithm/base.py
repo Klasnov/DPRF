@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, TensorDataset, random_split
 
 class BaseClient(ABC):
     def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
-                 local_epochs: int, local_batch_size: int, lr_local:float):
+                 local_epochs: int, local_batch_size: int, lr_local: float):
         """
         Initializes a client object with the following parameters.
 
@@ -156,41 +156,78 @@ class BaseClient(ABC):
         self.set_model(params_backup)
         return (correct_counts / total_samples), total_samples
     
-    def save_local_model(self, addition: str) -> None:
+    def save_local_model(self, client_addition: str = "") -> None:
         """
-        Saves the local model's state dictionary to a file.
+        Save the state dictionary of the local model to a file.
 
         Args:
-            - addition (str): A custom addition to the filename for model identification.
+            - client_addition (str, optional): Additional information to include in the filename.
 
-        This method saves the state dictionary of the client's local model to a file 
-        in a directory specific to the client. The model is saved in PyTorch format (.pt).
+        This method saves the state dictionary of the client's local model to a file. By default, it saves the model
+        with a filename that includes the dataset's name, client's ID, local training epochs, batch size, and learning
+        rate. You can provide additional information in the `client_addition` parameter to further distinguish the
+        saved model files. The saved model can later be loaded using the `load_local_model()` method.
         """
-        model_dir = f"./model/{self.algorithm}/clients"
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-        model_path = f"{model_dir}/{self.client_id}id_{self.lr_local}ll_{self.local_epochs}epc"
-        model_path = f"{model_path}_{self.local_batch_size}bch_{addition}_local.pt"
-        torch.save(self.local_model.state_dict(), model_path)
+        client_model_dir = f"./model/{self.algorithm}/clients"
+        if not os.path.exists(client_model_dir):
+            os.makedirs(client_model_dir)
+        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epochs}epc"
+        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_local.pt"
+        torch.save(self.local_model.state_dict(), client_model_path)
     
-    def save_personal_model(self, addition: str) -> None:
+    def save_personal_model(self, client_addition: str = "") -> None:
         """
-        Saves the personal model's state dictionary to a file.
+        Save the state dictionary of the personal local model to a file.
 
         Args:
-            - addition (str): A custom addition to the filename for model identification.
+            - client_addition (str, optional): Additional information to include in the filename.
 
-        This method saves the state dictionary of the client's personal model to a file
-        in a directory specific to the client. The model is saved in PyTorch format (.pt). 
+        This method saves the state dictionary of the client's personal local model to a file. The personal local model
+        is a deep copy of the local model and can be trained separately. By default, it saves the model with a filename
+        that includes the dataset's name client's ID, local training epochs, batch size, and learning rate. You can
+        provide additional information in the `client_addition` parameter to further distinguish the saved model files.
+        The saved model can later be loaded using the `load_personal_model()` method.
         """
-        model_dir = f"./model/{self.algorithm}/clients"
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-        model_path = f"{model_dir}/{self.client_id}id_{self.lr_local}ll_{self.local_epochs}epc"
-        model_path = f"{model_path}_{self.local_batch_size}bch_{addition}_personal.pt"
-        torch.save(self.personal_model.state_dict(), model_path)
+        client_model_dir = f"./model/{self.algorithm}/clients"
+        if not os.path.exists(client_model_dir):
+            os.makedirs(client_model_dir)
+        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epochs}epc"
+        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_personal.pt"
+        torch.save(self.personal_model.state_dict(), client_model_path)
     
-    # TODO: 完成客户端指定路径本地模型和个性化模型的加载
+    def load_local_model(self, client_addition: str = "") -> None:
+        """
+        Load a previously saved local model state dictionary from a file.
+
+        Args:
+            - client_addition (str, optional): Additional information used to identify the saved model file.
+
+        This method loads a previously saved state dictionary of the local model from a file. You can specify
+        the `client_addition` parameter to identify the saved model file with additional information, if provided.
+        The loaded model state can be used to initialize or update the client's local model with the saved parameters.
+        """
+        client_model_dir = f"./model/{self.algorithm}/clients"
+        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epochs}epc"
+        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_local.pt"
+        client_state_dict = torch.load(client_model_path)
+        self.local_model.load_state_dict(client_state_dict)
+    
+    def load_personal_model(self, client_addition: str = "") ->None:
+        """
+        Load a previously saved personal local model state dictionary from a file.
+
+        Args:
+            - client_addition (str, optional): Additional information used to identify the saved model file.
+
+        This method loads a previously saved state dictionary of the personal local model from a file. You can specify
+        the `client_addition` parameter to identify the saved model file with additional information, if provided.
+        The loaded model state can be used to initialize or update the client's personal local model with the saved parameters.
+        """
+        client_model_dir = f"./model/{self.algorithm}/clients"
+        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epochs}epc"
+        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_personal.pt"
+        client_state_dict = torch.load(client_model_path)
+        self.personal_model.load_state_dict(client_state_dict)
 
 
 class BaseServer(ABC):
@@ -358,16 +395,18 @@ class BaseServer(ABC):
         accuracy = correct_counts / len(self.test_data)
         self.global_accuracies.append(accuracy)
 
-    def save_result(self, addition: str) -> None:
+    def save_result(self, server_addition: str = "", client_addition: str = "") -> None:
         """
-        Saves evaluation results and statistics to a CSV file.
+        Save the results of federated learning to a CSV file.
 
         Args:
-            - addition (str): A custom addition to the filename for result identification.
+            - server_addition (str, optional): Additional information to include in the server filename.
+            - client_addition (str, optional): Additional information to include in the client filename.
 
-        This method saves the evaluation results and statistics, including train accuracy, train loss, test accuracy,
-        personalized accuracy, and global accuracy, to a CSV file. The file is saved in a directory specific to
-        the algorithm and dataset used in federated learning.
+        This method saves various federated learning metrics, including train accuracy, train loss, test accuracy,
+        personalized accuracy, and global accuracy, to a CSV file. The results are organized in a DataFrame and
+        saved to a file with a specific naming convention that includes dataset, round, learning rate, and optional
+        server and client additions.
         """
         result_data = {
             "Train Accuracy": self.train_accuracies,
@@ -380,44 +419,53 @@ class BaseServer(ABC):
         result_dir = f"./result/{self.algorithm}"
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
-        result_file = f"{result_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg_{addition}.csv"
+        server_settings = f"{self.dataset}d_{self.round}r_{self.lr_global}lg{server_addition}"
+        client = self.clients[0]
+        client_settings = f"{client.local_epochs}epc_{client.local_batch_size}bch_{client.lr_local}ll{client_addition}"
+        result_file = f"{result_dir}/{server_settings}_{client_settings}.csv"
         result_df.to_csv(result_file, index=False)
     
-    def save_model(self, server_addition: str, client_addition: str) -> None:
+    def save_model(self, server_addition: str = "", client_addition: str = "") -> None:
         """
-        Saves the global model's state dictionary to a file.
+        Save the global and client models to files.
 
         Args:
-            - server_addition (str): A custom addition to the filename for server's model identification.
-            - client_addition (str): A custom addition to the filename for client's model identification.
+            - server_addition (str, optional): Additional information to include in the server model filename.
+            - client_addition (str, optional): Additional information to include in the client model filenames.
 
-        This method saves the state dictionary of the global model to a file in a directory specific to
-        the algorithm and dataset used in federated learning. The model is saved in PyTorch format (.pt).
+        This method saves the state dictionary of the global model and the state dictionaries of each client's local
+        and personal models to separate files. The files are organized in specific directories and follow a naming
+        convention that includes dataset, round, learning rate, and optional server and client additions.
         """
-        model_dir = f"./model/{self.algorithm}"
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
-        model_path = f"{model_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg_{server_addition}.pt"
-        torch.save(self.global_model.state_dict(), model_path)
+        server_model_dir = f"./model/{self.algorithm}"
+        if not os.path.exists(server_model_dir):
+            os.makedirs(server_model_dir)
+        server_model_path = f"{server_model_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg{server_addition}.pt"
+        torch.save(self.global_model.state_dict(), server_model_path)
         for client in self.clients:
             client.save_local_model(client_addition)
             client.save_personal_model(client_addition)
     
-    def load_model(self, server_model_path) -> None:
+    def load_model(self, server_addition: str = "", client_addition: str = "") -> None:
         """
-        Loads a global model's state dictionary from a file.
+        Load the global and client models from previously saved files.
 
         Args:
-            - model_path (str): The path to the saved model file.
+            - server_addition (str, optional): Additional information used to identify the server model file.
+            - client_addition (str, optional): Additional information used to identify the client model files.
 
-        This method loads a global model's state dictionary from a specified file. It performs checks to ensure
-        that the file exists and is in the correct PyTorch format (.pt) before loading the model weights.
+        This method loads the state dictionary of the global model and the state dictionaries of each client's local
+        and personal models from previously saved files. The files are located in specific directories and are identified
+        based on dataset, round, learning rate, and optional server and client additions. The loaded models can be used
+        to initialize or update the global and client models with the saved parameters.
         """
-        if not os.path.exists(server_model_path):
-            raise ValueError(f"Model path {server_model_path} does not exist.")
+        server_model_dir = f"./model/{self.algorithm}"
+        server_model_path = f"{server_model_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg{server_addition}.pt"
         server_state_dict = torch.load(server_model_path)
         self.global_model.load_state_dict(server_state_dict)
-        # TODO: 完成客户端的模型加载
+        for client in self.clients:
+            client.load_local_model(client_addition)
+            client.load_personal_model(client_addition)
     
     def global_train(self) -> None:
         """
