@@ -7,7 +7,7 @@ from .base import BaseClient, BaseServer
 
 class pFMeMoClient(BaseClient):
     def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
-                 local_epochs: int, local_batch_size: int, lr_local: float, alpha: float, k: int):
+                 local_epoch: int, local_batch_size: int, lr_local: float, alpha: float, k: int):
         """
         Initializes a pFMeMoClient instance for personalized federated learning.
 
@@ -17,7 +17,7 @@ class pFMeMoClient(BaseClient):
             - dataset (str): Name of the dataset used for training.
             - device (str): Device ('cuda' or 'cpu') on which the client operates.
             - model (nn.Module): The deep learning model used by the client.
-            - local_epochs (int): Number of local training epochs per round.
+            - local_epoch (int): Number of local training epochs per round.
             - local_batch_size (int): Batch size for local training.
             - alpha (float): Weighting factor for regularization between global and personal models.
             - K (int): Threshold for early stopping in local model updates.
@@ -25,7 +25,7 @@ class pFMeMoClient(BaseClient):
         This constructor initializes a pFMeMoClient object with the specified parameters.
         It sets up client-specific properties and initializes personal and global models.
         """
-        super().__init__(client_id, algorithm, dataset, device, model, local_epochs, local_batch_size, lr_local)
+        super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
         self.global_model = deepcopy(list(model.parameters()))
         self.alpha: float = alpha
         self.k: int = k
@@ -104,11 +104,11 @@ class pFMeMoClient(BaseClient):
         After training, it calculates the updates made to the local model and stores them.
         """
         self.local_update.clear()
-        for i in range(self.local_epochs):
+        for i in range(self.local_epoch):
             self.update_per_model(batch_idx=i)
             self.update_local_model()
         for param_local, param_global in zip(self.local_model.parameters(), self.global_model):
-            self.local_update.append((param_local - param_global) / self.local_epochs)
+            self.local_update.append((param_local - param_global) / self.local_epoch)
     
     def get_update(self) -> list[torch.Tensor]:
         """

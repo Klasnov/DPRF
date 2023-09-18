@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, TensorDataset, random_split
 
 class BaseClient(ABC):
     def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
-                 local_epochs: int, local_batch_size: int, lr_local: float):
+                 local_epoch: int, local_batch_size: int, lr_local: float):
         """
         Initializes a client object with the following parameters.
 
@@ -35,7 +35,7 @@ class BaseClient(ABC):
         self.algorithm: str = algorithm
         self.dataset: str = dataset
         self.device: str = device
-        self.local_epochs: int = local_epochs
+        self.local_epoch: int = local_epoch
         self.local_batch_size: int = local_batch_size
         self.lr_local: float = lr_local
         self.local_model = deepcopy(model).to(self.device)
@@ -171,7 +171,7 @@ class BaseClient(ABC):
         client_model_dir = f"./model/{self.algorithm}/clients"
         if not os.path.exists(client_model_dir):
             os.makedirs(client_model_dir)
-        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epochs}epc"
+        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_local.pt"
         torch.save(self.local_model.state_dict(), client_model_path)
     
@@ -191,7 +191,7 @@ class BaseClient(ABC):
         client_model_dir = f"./model/{self.algorithm}/clients"
         if not os.path.exists(client_model_dir):
             os.makedirs(client_model_dir)
-        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epochs}epc"
+        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_personal.pt"
         torch.save(self.personal_model.state_dict(), client_model_path)
     
@@ -207,7 +207,7 @@ class BaseClient(ABC):
         The loaded model state can be used to initialize or update the client's local model with the saved parameters.
         """
         client_model_dir = f"./model/{self.algorithm}/clients"
-        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epochs}epc"
+        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_local.pt"
         client_state_dict = torch.load(client_model_path)
         self.local_model.load_state_dict(client_state_dict)
@@ -224,7 +224,7 @@ class BaseClient(ABC):
         The loaded model state can be used to initialize or update the client's personal local model with the saved parameters.
         """
         client_model_dir = f"./model/{self.algorithm}/clients"
-        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epochs}epc"
+        client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_personal.pt"
         client_state_dict = torch.load(client_model_path)
         self.personal_model.load_state_dict(client_state_dict)
@@ -421,7 +421,7 @@ class BaseServer(ABC):
             os.makedirs(result_dir)
         server_settings = f"{self.dataset}d_{self.round}r_{self.lr_global}lg{server_addition}"
         client = self.clients[0]
-        client_settings = f"{client.local_epochs}epc_{client.local_batch_size}bch_{client.lr_local}ll{client_addition}"
+        client_settings = f"{client.local_epoch}epc_{client.local_batch_size}bch_{client.lr_local}ll{client_addition}"
         result_file = f"{result_dir}/{server_settings}_{client_settings}.csv"
         result_df.to_csv(result_file, index=False)
     

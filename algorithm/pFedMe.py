@@ -7,8 +7,8 @@ from .base import BaseClient, BaseServer
 
 class pFedMeClient(BaseClient):
     def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
-                 local_epochs: int, local_batch_size: int, lamda: float, k: int, lr_local: float):
-        super().__init__(client_id, algorithm, dataset, device, model, local_epochs, local_batch_size, lr_local)
+                 local_epoch: int, local_batch_size: int, lamda: float, k: int, lr_local: float):
+        super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
         self.global_model = deepcopy(list(model.parameters()))
         self.lamda: float = lamda
         self.k: int = k
@@ -53,8 +53,7 @@ class pFedMeClient(BaseClient):
             param_local.data -= self.lr_local * self.lamda * (param_local - param_per)
 
     def local_train(self) -> None:
-        self.local_update.clear()
-        for i in range(self.local_epochs):
+        for i in range(self.local_epoch):
             self.update_per_model(batch_idx=i)
             self.update_local_model()
     
@@ -67,26 +66,14 @@ class pFedMeServer(BaseServer):
                  user_selection_ratio: float, round: int, beta: float):
         super().__init__(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
         self.clients: list[pFedMeClient] = []
-        self.beta = beta
+        self.beta: float = beta
 
     def update_global_model(self) -> None:
-        pass
-
-    def global_train(self, save_name_addition: str) -> None:
-        for i in range(self.round):
-            self.send_global_model()
-            for client in self.clients:
-                client.local_train()
-            self.update_global_model()
-            self.model_evaluate()
-            self.model_per_evaluate()
-            self.model_global_test()
-
-            print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
-            print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
-            print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
-            print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
-            print()
-
-        self.save_result(save_name_addition)
-        # self.save_model(save_name_addition)
+        clients_selected: list[pFedMeClient] = self.select_clients()
+        s = len(clients_selected)
+        params_clients: list[torch.Tensor] = [torch.zeros_like(global_param) for global_param in self.global_model.parameters()]
+        for client in clients_selected:
+            for param_clients, param_client in zip(params_clients, client.get_local_model().parameters()):
+                param_clients += param_client / s
+        for para_global, param_clients in zip(self.global_model.parameters(), params_clients):
+            para_global.data = (1 - self.beta) * para_global + self.beta * param_clients
