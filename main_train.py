@@ -22,8 +22,11 @@ def main() -> None:
         if dataset_choice == 'A' or dataset_choice == 'a':
             dataset = "mnist"
             break
-        # elif dataset_choice == 'b':
+        # elif dataset_choice == 'B' or dataset_choice == 'b':
         #     dataset = "cifar10"
+        #     break
+        # elif dataset_choice == 'C' or dataset_choice == 'c':
+        #     dataset = "cifar100"
         #     break
         else:
             print("Invalid dataset choice.")

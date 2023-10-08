@@ -229,7 +229,6 @@ class BaseClient(ABC):
         client_state_dict = torch.load(client_model_path)
         self.personal_model.load_state_dict(client_state_dict)
 
-
 class BaseServer(ABC):
     def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_global: float,
                  selection_ratio: float, round: int):

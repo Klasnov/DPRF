@@ -123,7 +123,6 @@ class pFMeMoClient(BaseClient):
         """
         return self.local_update
 
-
 class pFMeMoServer(BaseServer):
     def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_g: float,
                  user_selection_ratio: float, round: int):
