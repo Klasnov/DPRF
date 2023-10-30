@@ -8,9 +8,9 @@ def main() -> None:
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    print("Welcome to Personalized Federated Learning Program!")
-    print("Please follow the prompts to select the dataset and algorithm for training.")
-    print()
+    # print("Welcome to Personalized Federated Learning Program!")
+    # print("Please follow the prompts to select the dataset and algorithm for training.")
+    # print()
 
     # Dataset selection
     # while True:
