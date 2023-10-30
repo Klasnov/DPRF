@@ -1,6 +1,6 @@
 import torch
 from time import time
-from algorithm.pFMeMo import pFMeMoServer, pFMeMoClient
+from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from utils.util_models import Minst_Model
 
@@ -41,14 +41,14 @@ def main() -> None:
     while True:
         print("Select the algorithm for training.")
         print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
-        print("A. pFMeMo")
+        print("A. DPRF")
         print("B. pFedMe")
         print("C. FedMGDA+")
         print("D. per-FedAvg")
         algorithm_choice = input("Your choice: ").lower()
 
         if algorithm_choice == 'A' or algorithm_choice == 'a':
-            algorithm = "pFMeMo"
+            algorithm = "DPRF"
             break
         elif algorithm_choice == 'B' or algorithm_choice == 'b':
             algorithm = "pFedMe"
@@ -70,14 +70,14 @@ def main() -> None:
     LR_GLOBAL = 1e-3
     LR_LOCAL = 1e-3
 
-    if algorithm == "pFMeMo":
+    if algorithm == "DPRF":
         ALPHA = 275
         K = 9
-        server = pFMeMoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
+        server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         if dataset == "mnist":
             CLIENT_NUM = 10
             for i in range(CLIENT_NUM):
-                server.add_client(pFMeMoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH,
+                server.add_client(DPRFClient(i, algorithm, dataset, device, model, LOCAL_EPOCH,
                                                LOCAL_BATCH_SIZE, LR_LOCAL, ALPHA, K))
         # server.load_model(client_addition=f"_{ALPHA}a_{K}k")
         server.global_train()

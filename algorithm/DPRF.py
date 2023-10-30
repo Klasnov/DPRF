@@ -5,26 +5,9 @@ from copy import deepcopy
 from .base import BaseClient, BaseServer
 
 
-class pFMeMoClient(BaseClient):
+class DPRFClient(BaseClient):
     def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
                  local_epoch: int, local_batch_size: int, lr_local: float, alpha: float, k: int):
-        """
-        Initializes a pFMeMoClient instance for personalized federated learning.
-
-        Args:
-            - client_id (int): Unique identifier for the client.
-            - algorithm (str): Name of the federated learning algorithm.
-            - dataset (str): Name of the dataset used for training.
-            - device (str): Device ('cuda' or 'cpu') on which the client operates.
-            - model (nn.Module): The deep learning model used by the client.
-            - local_epoch (int): Number of local training epochs per round.
-            - local_batch_size (int): Batch size for local training.
-            - alpha (float): Weighting factor for regularization between global and personal models.
-            - K (int): Threshold for early stopping in local model updates.
-
-        This constructor initializes a pFMeMoClient object with the specified parameters.
-        It sets up client-specific properties and initializes personal and global models.
-        """
         super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
         self.global_model = deepcopy(list(model.parameters()))
         self.alpha: float = alpha
@@ -32,18 +15,6 @@ class pFMeMoClient(BaseClient):
         self.local_update: list[torch.Tensor] = list()
 
     def calculate_grad_per(self, batch_idx: int) -> list[torch.Tensor]:
-        """
-        Calculate gradients for the personal model on a specific batch.
-
-        Args:
-            - batch_idx (int): Index of the batch for which gradients are calculated.
-
-        Returns:
-            list[torch.Tensor]: List of gradients for each parameter of the personal model.
-
-        This method calculates gradients for the personal model on a specific batch of training data.
-        It computes the gradients of the loss with respect to the model parameters using backpropagation.
-        """
         grads: list[torch.Tensor] = []
         self.personal_model.train()
         self.personal_model.zero_grad()
@@ -59,19 +30,6 @@ class pFMeMoClient(BaseClient):
         return grads
 
     def calculate_grad_local(self, batch_idx: int) -> list[torch.Tensor]:
-        """
-        Calculate local gradients for personal model with regularization terms.
-
-        Args:
-            - batch_idx (int): Index of the batch for which gradients are calculated.
-
-        Returns:
-            list[torch.Tensor]: List of local gradients for each parameter of the personal model.
-
-        This method calculates local gradients for the personal model with regularization terms
-        on a specific batch of training data. It computes gradients of the loss with respect to
-        the model parameters using backpropagation and adds regularization terms to the gradients.
-        """
         per_grads = self.calculate_grad_per(batch_idx)
         regular_terms: list[torch.Tensor] = []
         for param_local, param_theta in zip(self.local_model.parameters(), self.personal_model.parameters()):
@@ -96,13 +54,6 @@ class pFMeMoClient(BaseClient):
             param_local.data -= self.lr_local * self.alpha * (param_local - param_per)
 
     def local_train(self) -> None:
-        """
-        Perform local training and update the local model.
-
-        This method performs local training for the client's personal model. It iteratively
-        updates the personal model with early stopping and incorporates regularization terms.
-        After training, it calculates the updates made to the local model and stores them.
-        """
         self.local_update.clear()
         for i in range(self.local_epoch):
             self.update_per_model(batch_idx=i)
@@ -111,53 +62,16 @@ class pFMeMoClient(BaseClient):
             self.local_update.append((param_local - param_global) / self.local_epoch)
     
     def get_update(self) -> list[torch.Tensor]:
-        """
-        Get the updates made to the local model during local training.
-
-        Returns:
-            list[torch.Tensor]: List of updates made to the local model's parameters.
-
-        This method retrieves and returns the updates that were made to the local model
-        during the client's local training. These updates represent the difference between
-        the local model and the global model.
-        """
         return self.local_update
 
-class pFMeMoServer(BaseServer):
+class DPRFServer(BaseServer):
     def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_g: float,
                  user_selection_ratio: float, round: int):
-        """
-        Initialize the pFMeMoServer.
-
-        Args:
-            - algorithm (str): The name of the algorithm.
-            - dataset (str): The name of the dataset.
-            - device (str): The device (e.g., 'cuda' or 'cpu') for model training.
-            - model (nn.Module): The global model used in the federated learning.
-            - lr_g (float): The global learning rate for updating the global model.
-            - user_selection_ratio (float): The ratio of selected clients for each round.
-            - round (int): The number of communication rounds.
-
-        This constructor initializes the pFMeMoServer with the specified algorithm, dataset,
-        device, global model, learning rate, client selection ratio, and communication rounds.
-        """
         super().__init__(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
-        self.clients: list[pFMeMoClient] = []
+        self.clients: list[DPRFClient] = []
     
     def calculate_weights(self) -> tuple[list[list[torch.Tensor]], torch.Tensor]:
-        """
-        Calculate client weights for aggregation and normalized updates.
-
-        Returns:
-            tuple[list[list[torch.Tensor]], torch.Tensor]:
-                - updates (list[list[torch.Tensor]]): List of client updates for aggregation.
-                - weights (torch.Tensor): Client weights for aggregation.
-
-        This method calculates client weights for aggregation and retrieves the normalized
-        updates from selected clients. The weights are computed based on the normalized L1
-        norm of client updates.
-        """
-        clients_selected: list[pFMeMoClient] = self.select_clients()
+        clients_selected: list[DPRFClient] = self.select_clients()
         updates: list[list[torch.Tensor]] = []
         for client in clients_selected:
             updates.append(client.get_update())
@@ -198,13 +112,6 @@ class pFMeMoServer(BaseServer):
         return updates, weights
 
     def update_global_model(self) -> None:
-        """
-        Update the global model by aggregating client updates.
-
-        This method updates the global model by aggregating updates from selected clients.
-        It computes a weighted average of the client updates based on client weights and
-        adjusts the global model accordingly.
-        """
         clients_updates, weights = self.calculate_weights()
         global_updates: list[torch.Tensor] = [torch.zeros_like(global_param) for global_param in self.global_model.parameters()]
         for client_updates, weight in zip(clients_updates, weights):
