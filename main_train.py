@@ -13,57 +13,59 @@ def main() -> None:
     print()
 
     # Dataset selection
-    while True:
-        print("Select the dataset.")
-        print("For example, enter A or a to indicate that the MNIST dataset is selected.")
-        print("A. MNIST")
-        print("B. Cifar10")
-        dataset_choice = input("Your choice: ").lower()
-        if dataset_choice == 'A' or dataset_choice == 'a':
-            dataset = "mnist"
-            break
-        # elif dataset_choice == 'B' or dataset_choice == 'b':
-        #     dataset = "cifar10"
-        #     break
-        # elif dataset_choice == 'C' or dataset_choice == 'c':
-        #     dataset = "cifar100"
-        #     break
-        else:
-            print("Invalid dataset choice.")
-            print()
-    print()
+    # while True:
+    #     print("Select the dataset.")
+    #     print("For example, enter A or a to indicate that the MNIST dataset is selected.")
+    #     print("A. MNIST")
+    #     print("B. Cifar10")
+    #     dataset_choice = input("Your choice: ").lower()
+    #     if dataset_choice == 'A' or dataset_choice == 'a':
+    #         dataset = "mnist"
+    #         break
+    #     # elif dataset_choice == 'B' or dataset_choice == 'b':
+    #     #     dataset = "cifar10"
+    #     #     break
+    #     # elif dataset_choice == 'C' or dataset_choice == 'c':
+    #     #     dataset = "cifar100"
+    #     #     break
+    #     else:
+    #         print("Invalid dataset choice.")
+    #         print()
+    # print()
+    dataset = "mnist"
 
     # Model instantiation
     if dataset == "mnist":
         model = Minst_Model()
 
     # Algorithm selection
-    while True:
-        print("Select the algorithm for training.")
-        print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
-        print("A. DPRF")
-        print("B. pFedMe")
-        print("C. FedMGDA+")
-        print("D. per-FedAvg")
-        algorithm_choice = input("Your choice: ").lower()
+    # while True:
+    #     print("Select the algorithm for training.")
+    #     print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
+    #     print("A. DPRF")
+    #     print("B. pFedMe")
+    #     print("C. FedMGDA+")
+    #     print("D. per-FedAvg")
+    #     algorithm_choice = input("Your choice: ").lower()
 
-        if algorithm_choice == 'A' or algorithm_choice == 'a':
-            algorithm = "DPRF"
-            break
-        elif algorithm_choice == 'B' or algorithm_choice == 'b':
-            algorithm = "pFedMe"
-            break
-        # elif algorithm_choice == 'c':
-        #     algorithm = "FedMGDA+"
-        # elif algorithm_choice == 'd':
-        #     algorithm = "per-FedAvg"
-        else:
-            print("Invalid algorithm choice.")
-            print()
-    print()
+    #     if algorithm_choice == 'A' or algorithm_choice == 'a':
+    #         algorithm = "DPRF"
+    #         break
+    #     elif algorithm_choice == 'B' or algorithm_choice == 'b':
+    #         algorithm = "pFedMe"
+    #         break
+    #     # elif algorithm_choice == 'c':
+    #     #     algorithm = "FedMGDA+"
+    #     # elif algorithm_choice == 'd':
+    #     #     algorithm = "per-FedAvg"
+    #     else:
+    #         print("Invalid algorithm choice.")
+    #         print()
+    # print()
+    algorithm = "DPRF"
 
     # Hyperparameters
-    SELECT_RATIO = 0.3
+    SELECT_RATIO = 0.4
     ROUND_NUM = 20
     LOCAL_EPOCH = 20
     LOCAL_BATCH_SIZE = 64
