@@ -13,23 +13,18 @@ class pFedMeClient(BaseClient):
         self.lamda: float = lamda
         self.k: int = k
 
-    def calculate_grad_per(self, batch_idx: int) -> list[torch.Tensor]:
+    def calculate_grad_per(self, inputs: torch.Tensor, labels: torch.Tensor) -> list[torch.Tensor]:
         grads: list[torch.Tensor] = []
-        self.personal_model.train()
         self.personal_model.zero_grad()
-        for i, (inputs, labels) in enumerate(self.train_dataloader):
-            if i == batch_idx:
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
-                outputs = self.personal_model(inputs)
-                loss = F.cross_entropy(outputs, labels)
-                loss.backward()
-                for parm in self.personal_model.parameters():
-                    grads.append(parm.grad)
-                break
+        outputs = self.personal_model(inputs)
+        loss = F.cross_entropy(outputs, labels)
+        loss.backward()
+        for parm in self.personal_model.parameters():
+            grads.append(parm.grad)
         return grads
 
-    def calculate_grad_local(self, batch_idx: int) -> list[torch.Tensor]:
-        per_grads = self.calculate_grad_per(batch_idx)
+    def calculate_grad_local(self, inputs: torch.Tensor, labels: torch.Tensor) -> list[torch.Tensor]:
+        per_grads = self.calculate_grad_per(inputs, labels)
         regular_terms: list[torch.Tensor] = []
         for param_local, param_theta in zip(self.local_model.parameters(), self.personal_model.parameters()):
             regular_term = self.lamda * (param_theta - param_local)
@@ -40,11 +35,13 @@ class pFedMeClient(BaseClient):
             grads_local.append(grad_local)
         return grads_local
 
-    def update_per_model(self, batch_idx: int) -> None:
+    def update_per_model(self) -> None:
+        self.personal_model.train()
         count = 0
         while count < self.k:
             count += 1
-            grad_h = self.calculate_grad_local(batch_idx)
+            inputs, labels = self.get_train_batch()
+            grad_h = self.calculate_grad_local(inputs, labels)
             for param_per, grad in zip(self.personal_model.parameters(), grad_h):
                 param_per.data -= self.lr_local * grad
 
@@ -54,7 +51,7 @@ class pFedMeClient(BaseClient):
 
     def local_train(self) -> None:
         for i in range(self.local_epoch):
-            self.update_per_model(batch_idx=i)
+            self.update_per_model()
             self.update_local_model()
     
     def get_local_model(self) -> nn.Module:

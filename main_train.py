@@ -65,15 +65,15 @@ def main() -> None:
     algorithm = "DPRF"
 
     # Hyperparameters
-    SELECT_RATIO = 0.4
-    ROUND_NUM = 10
-    LOCAL_EPOCH = 20
+    SELECT_RATIO = 0.3
+    ROUND_NUM = 50
+    LOCAL_EPOCH = 25
     LOCAL_BATCH_SIZE = 64
-    LR_GLOBAL = 1e-3
-    LR_LOCAL = 1e-3
 
     if algorithm == "DPRF":
-        ALPHA = 5
+        LR_GLOBAL = 1
+        LR_LOCAL = 1e-3
+        ALPHA = 25
         K = 15
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         if dataset == "mnist":
@@ -87,6 +87,8 @@ def main() -> None:
         # server.save_model(client_addition=f"_{ALPHA}a_{K}k")
     
     elif algorithm == "pFedMe":
+        LR_GLOBAL = 1e-3
+        LR_LOCAL = 1e-3
         LAMDA = 15
         K = 5
         BETA = 2
