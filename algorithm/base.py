@@ -83,18 +83,15 @@ class BaseClient(ABC):
         return (correct_counts / total_samples), total_samples
 
     def test_per_inform(self) -> tuple[float, int]:
-        params_backup = deepcopy(self.local_model.state_dict())
-        self.local_model.load_state_dict(self.personal_model.state_dict())
         correct_counts = 0
         total_samples = len(self.test_data)
-        self.local_model.eval()
+        self.personal_model.eval()
         with torch.no_grad():
             for inputs, labels in self.test_full_dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
-                outputs = self.local_model(inputs)
+                outputs = self.personal_model(inputs)
                 predictions = torch.argmax(outputs, dim=1)
                 correct_counts += torch.sum(predictions == labels).item()
-        self.set_model(params_backup)
         return (correct_counts / total_samples), total_samples
     
     def save_local_model(self, client_addition: str = "") -> None:
@@ -141,13 +138,20 @@ class BaseServer(ABC):
         self.round: int = round
         self.train_accuracies = []
         self.train_losses = []
-        self.test_accuracies = []
+        self.local_accuracies = []
         self.personalized_accuracies = []
         self.global_accuracies = []
         self.test_data = torch.load(f'./data/{dataset}/data/x_test.pt')
         self.test_labels = torch.load(f'./data/{dataset}/data/y_test.pt')
         self.test_dataloader = DataLoader(TensorDataset(self.test_data, self.test_labels),
                                           batch_size=len(self.test_data), shuffle=False)
+        
+        self.last_local_acc = 0
+        self.last_per_acc = 0
+        self.last_global_acc = 0
+        self.des_time_local_acc = 0
+        self.des_time_per_acc = 0
+        self.des_time_global_acc = 0
 
     def add_client(self, client: BaseClient) -> None:
         self.clients.append(client)
@@ -166,6 +170,12 @@ class BaseServer(ABC):
     @abstractclassmethod
     def update_global_model(self) -> None:
         pass
+
+    def lr_decay(self) -> None:
+        self.lr_global /= 1e2
+        print("\n** learning rate has decayed to %.7f **\n" % self.lr_global)
+        for client in self.clients:
+            client.lr_local /= 1e2
 
     def model_evaluate(self) -> None:
         train_acc = []
@@ -192,7 +202,7 @@ class BaseServer(ABC):
 
         self.train_accuracies.append(np.sum(train_acc * train_sample_num / train_total_num))
         self.train_losses.append(np.sum(train_loss * train_sample_num / train_total_num))
-        self.test_accuracies.append(np.sum(test_acc * test_sample_num / test_total_num))
+        self.local_accuracies.append(np.sum(test_acc * test_sample_num / test_total_num))
 
     def model_per_evaluate(self) -> None:
         test_per_acc = []
@@ -216,14 +226,22 @@ class BaseServer(ABC):
                 predictions = torch.argmax(outputs, dim=1)
                 correct_count = torch.sum(predictions == labels).item()
                 correct_counts += correct_count
-        accuracy = correct_counts / len(self.test_data)
-        self.global_accuracies.append(accuracy)
+        global_acc = correct_counts / len(self.test_data)
+        self.global_accuracies.append(global_acc)
+        if global_acc < self.last_global_acc:
+            self.des_time_global_acc += 1
+            if self.des_time_global_acc == 3:
+                self.lr_decay()
+                self.des_time_global_acc -= 1
+        else:
+            self.des_time_local_acc = 0
+        self.last_local_acc = global_acc
 
     def save_result(self, server_addition: str = "", client_addition: str = "") -> None:
         result_data = {
             "Train Accuracy": self.train_accuracies,
             "Train Loss": self.train_losses,
-            "Test Accuracy": self.test_accuracies,
+            "Test Accuracy": self.local_accuracies,
             "Personalized Accuracy": self.personalized_accuracies,
             "Global Accuracy": self.global_accuracies
         }
@@ -231,7 +249,7 @@ class BaseServer(ABC):
         result_dir = f"./result/{self.algorithm}"
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
-        server_settings = f"{self.dataset}d_{self.round}r_{self.lr_global}lg{server_addition}"
+        server_settings = f"{self.dataset}_{self.round}r_{self.lr_global}lg{server_addition}"
         client = self.clients[0]
         client_settings = f"{client.local_epoch}epc_{client.local_batch_size}bch_{client.lr_local}ll{client_addition}"
         result_file = f"{result_dir}/{server_settings}_{client_settings}.csv"
@@ -241,7 +259,7 @@ class BaseServer(ABC):
         server_model_dir = f"./model/{self.algorithm}"
         if not os.path.exists(server_model_dir):
             os.makedirs(server_model_dir)
-        server_model_path = f"{server_model_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg{server_addition}.pt"
+        server_model_path = f"{server_model_dir}/{self.dataset}_{self.round}r_{self.lr_global}lg{server_addition}.pt"
         torch.save(self.global_model.state_dict(), server_model_path)
         for client in self.clients:
             client.save_local_model(client_addition)
@@ -249,7 +267,7 @@ class BaseServer(ABC):
     
     def load_model(self, server_addition: str = "", client_addition: str = "") -> None:
         server_model_dir = f"./model/{self.algorithm}"
-        server_model_path = f"{server_model_dir}/{self.dataset}d_{self.round}r_{self.lr_global}lg{server_addition}.pt"
+        server_model_path = f"{server_model_dir}/{self.dataset}_{self.round}r_{self.lr_global}lg{server_addition}.pt"
         server_state_dict = torch.load(server_model_path)
         self.global_model.load_state_dict(server_state_dict)
         for client in self.clients:
@@ -267,7 +285,7 @@ class BaseServer(ABC):
             self.model_global_test()
             print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
             print("  - trai_acc = %.4f%%" % (self.train_accuracies[i] * 100))
-            print("  - locl_acc = %.4f%%" % (self.test_accuracies[i] * 100))
+            print("  - locl_acc = %.4f%%" % (self.local_accuracies[i] * 100))
             print("  - pern_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
             print("  - glob_acc = %.4f%%" % (self.global_accuracies[i] * 100))
             print()
