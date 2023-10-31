@@ -66,21 +66,21 @@ def main() -> None:
 
     # Hyperparameters
     SELECT_RATIO = 0.4
-    ROUND_NUM = 20
+    ROUND_NUM = 10
     LOCAL_EPOCH = 20
     LOCAL_BATCH_SIZE = 64
     LR_GLOBAL = 1e-3
     LR_LOCAL = 1e-3
 
     if algorithm == "DPRF":
-        ALPHA = 275
-        K = 9
+        ALPHA = 5
+        K = 15
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         if dataset == "mnist":
             CLIENT_NUM = 10
             for i in range(CLIENT_NUM):
                 server.add_client(DPRFClient(i, algorithm, dataset, device, model, LOCAL_EPOCH,
-                                               LOCAL_BATCH_SIZE, LR_LOCAL, ALPHA, K))
+                                             LOCAL_BATCH_SIZE, LR_LOCAL, ALPHA, K))
         # server.load_model(client_addition=f"_{ALPHA}a_{K}k")
         server.global_train()
         server.save_result(client_addition=f"_{ALPHA}a_{K}k")

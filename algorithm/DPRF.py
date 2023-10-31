@@ -90,22 +90,26 @@ class DPRFServer(BaseServer):
                 norm_updates.append(zero_update)
             else:
                 norm_updates.append(update_flatten / norm)
-        norm_square_updates = [torch.norm(norm_grad, p=2) ** 2 for norm_grad in norm_updates]
+        
+        norms: list[torch.Tensor] = []
+        for norm_update in norm_updates:
+            norms.append(torch.norm(norm_update, p=1))
+
         num_nonzero = 0
-        for update in norm_square_updates:
-            if update != 0:
+        for norm in norms:
+            if norm != 0:
                 num_nonzero += 1
 
         weights = torch.zeros(len(clients_selected))
         if num_nonzero >= 2:
             for i in range(len(weights)):
-                if norm_square_updates[i] == 0:
+                if norms[i] == 0:
                     continue
                 sum = 0
-                for j in range(len(norm_square_updates)):
-                    if norm_square_updates[j] != 0 and j != i:
-                        sum += 1 / norm_square_updates[j]
-                weights[i] = (1 / norm_square_updates[i]) / sum
+                for j in range(len(norms)):
+                    if norms[j] != 0 and j != i:
+                        sum += 1 / norms[j]
+                weights[i] = (1 / norms[i]) / sum
         else:
             for i in range(len(weights)):
                 weights[i] = 1 / len(clients_selected)

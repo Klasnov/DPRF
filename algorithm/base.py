@@ -80,12 +80,12 @@ class BaseClient(ABC):
         """
         pass
 
-    def train_inform(self) -> tuple[int, float, int]:
+    def train_inform(self) -> tuple[float, float, int]:
         """
         Calculates training statistics for the client's local model.
 
         Returns:
-            - correct_counts (int): Total number of correctly classified samples in the training set.
+            - correct_counts (float): Total number of correctly classified samples in the training set.
             - mean_loss (float): Mean loss (error) of the local model on the training set.
             - total_samples (int): Total number of samples in the training set.
 
@@ -107,12 +107,12 @@ class BaseClient(ABC):
                 correct_counts += torch.sum(predictions == labels).item()
         return (correct_counts / total_samples), np.mean(losses), total_samples
 
-    def test_inform(self) -> tuple[int, int]:
+    def test_inform(self) -> tuple[float, int]:
         """
         Calculates testing statistics for the client's local model.
 
         Returns:
-            - correct_counts (int): Total number of correctly classified samples in the test set.
+            - correct_counts (float): Total number of correctly classified samples in the test set.
             - total_samples (int): Total number of samples in the test set.
 
         This method evaluates the local model's performance on the entire test dataset
@@ -130,12 +130,12 @@ class BaseClient(ABC):
                 correct_counts += torch.sum(predictions == labels).item()
         return (correct_counts / total_samples), total_samples
 
-    def test_per_inform(self) -> tuple[int, int]:
+    def test_per_inform(self) -> tuple[float, int]:
         """
         Calculates testing statistics for the client's personal local model.
 
         Returns:
-            - correct_counts (int): Total number of correctly classified samples by the personal local model.
+            - correct_counts (float): Total number of correctly classified samples by the personal local model.
             - total_samples (int): Total number of samples in the test set.
 
         This method evaluates the client's personal local model's performance on the entire test dataset
@@ -344,9 +344,7 @@ class BaseServer(ABC):
         
         train_acc = np.asarray(train_acc)
         train_loss = np.asarray(train_loss)
-        train_sample_num = np.asarray(train_sample_num)
         test_acc = np.asarray(test_acc)
-        test_sample_num = np.asarray(test_sample_num)
 
         train_total_num = np.sum(train_sample_num)
         test_total_num = np.sum(test_sample_num)
@@ -371,7 +369,6 @@ class BaseServer(ABC):
             test_sample_num.append(sample_num)
         
         test_per_acc = np.asarray(test_per_acc)
-        test_sample_num = np.asarray(test_sample_num)
         test_total_num = np.sum(test_sample_num)
         self.personalized_accuracies.append(np.sum(test_per_acc * test_sample_num / test_total_num))
 
@@ -481,9 +478,14 @@ class BaseServer(ABC):
             self.model_evaluate()
             self.model_per_evaluate()
             self.model_global_test()
-            if (i + 1) % 10 == 0:
-                print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
-                print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
-                print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
-                print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
-                print()
+            # if (i + 1) % 10 == 0:
+            #     print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
+            #     print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
+            #     print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
+            #     print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
+            #     print()
+            print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
+            print("  - train_acc = %.4f%%" % (self.train_accuracies[i] * 100))
+            print("  - test_acc = %.4f%%" % (self.test_accuracies[i] * 100))
+            print("  - peronal_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
+            print()
