@@ -146,9 +146,9 @@ class BaseServer(ABC):
         self.test_dataloader = DataLoader(TensorDataset(self.test_data, self.test_labels),
                                           batch_size=len(self.test_data), shuffle=False)
         
-        self.last_local_acc = 0
-        self.last_per_acc = 0
-        self.last_global_acc = 0
+        self.last_local_acc = 100
+        self.last_per_acc = 100
+        self.last_global_acc = 100
         self.des_time_local_acc = 0
         self.des_time_per_acc = 0
         self.des_time_global_acc = 0
@@ -234,7 +234,7 @@ class BaseServer(ABC):
                 self.lr_decay()
                 self.des_time_global_acc -= 1
         else:
-            self.des_time_local_acc = 0
+            self.des_time_global_acc = 0
         self.last_local_acc = global_acc
 
     def save_result(self, server_addition: str = "", client_addition: str = "") -> None:
