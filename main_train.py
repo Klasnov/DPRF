@@ -62,11 +62,11 @@ def main() -> None:
     #         print("Invalid algorithm choice.")
     #         print()
     # print()
-    algorithm = "DPRF"
+    algorithm = "pFedMe"
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 100
+    ROUND_NUM = 50
     LOCAL_EPOCH = 20
     LOCAL_BATCH_SIZE = 64
 

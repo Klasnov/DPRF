@@ -193,6 +193,8 @@ class BaseServer(ABC):
             test_acc.append(client_test_acc)
             test_sample_num.append(client_test_num)
         
+        print(f"train_acc = {train_acc}")
+
         train_acc = np.asarray(train_acc)
         train_loss = np.asarray(train_loss)
         test_acc = np.asarray(test_acc)
@@ -231,11 +233,11 @@ class BaseServer(ABC):
         if global_acc < self.last_global_acc:
             self.des_time_global_acc += 1
             if self.des_time_global_acc == 3:
-                self.lr_decay()
+                # self.lr_decay()
                 self.des_time_global_acc -= 1
         else:
             self.des_time_global_acc = 0
-        self.last_local_acc = global_acc
+        self.last_global_acc = global_acc
 
     def save_result(self, server_addition: str = "", client_addition: str = "") -> None:
         result_data = {
