@@ -2,6 +2,7 @@ import torch
 from time import time
 from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
+from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
 from utils.util_models import Minst_Model
 
 def main() -> None:
@@ -19,15 +20,15 @@ def main() -> None:
     #     print("A. MNIST")
     #     print("B. Cifar10")
     #     dataset_choice = input("Your choice: ").lower()
-    #     if dataset_choice == 'A' or dataset_choice == 'a':
+    #     if dataset_choice == 'a':
     #         dataset = "mnist"
     #         break
-    #     # elif dataset_choice == 'B' or dataset_choice == 'b':
-    #     #     dataset = "cifar10"
-    #     #     break
-    #     # elif dataset_choice == 'C' or dataset_choice == 'c':
-    #     #     dataset = "cifar100"
-    #     #     break
+    #     elif dataset_choice == 'b':
+    #         dataset = "cifar10"
+    #         break
+    #     elif dataset_choice == 'c':
+    #         dataset = "cifar100"
+    #         break
     #     else:
     #         print("Invalid dataset choice.")
     #         print()
@@ -45,24 +46,30 @@ def main() -> None:
     #     print("A. DPRF")
     #     print("B. pFedMe")
     #     print("C. FedMGDA+")
-    #     print("D. per-FedAvg")
+    #     print("D. APPLE")
+    #     print("E. FedFomo")
     #     algorithm_choice = input("Your choice: ").lower()
 
-    #     if algorithm_choice == 'A' or algorithm_choice == 'a':
+    #     if algorithm_choice == 'a':
     #         algorithm = "DPRF"
     #         break
-    #     elif algorithm_choice == 'B' or algorithm_choice == 'b':
+    #     elif algorithm_choice == 'b':
     #         algorithm = "pFedMe"
     #         break
-    #     # elif algorithm_choice == 'c':
-    #     #     algorithm = "FedMGDA+"
-    #     # elif algorithm_choice == 'd':
-    #     #     algorithm = "per-FedAvg"
+    #     elif algorithm_choice == 'c':
+    #         algorithm = "FedMGDA+"
+    #         break
+    #     elif algorithm_choice == 'd':
+    #         algorithm = "APPLE"
+    #         break
+    #     elif algorithm_choice == 'e':
+    #         algorithm = "APPLE"
+    #         break
     #     else:
     #         print("Invalid algorithm choice.")
     #         print()
     # print()
-    algorithm = "pFedMe"
+    algorithm = "FedMGDA+"
 
     # Hyperparameters
     SELECT_RATIO = 0.3
@@ -78,9 +85,9 @@ def main() -> None:
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         if dataset == "mnist":
             CLIENT_NUM = 10
-            for i in range(CLIENT_NUM):
-                server.add_client(DPRFClient(i, algorithm, dataset, device, model, LOCAL_EPOCH,
-                                             LOCAL_BATCH_SIZE, LR_LOCAL, ALPHA, K))
+        for i in range(CLIENT_NUM):
+            server.add_client(DPRFClient(i, algorithm, dataset, device, model, LOCAL_EPOCH,
+                                            LOCAL_BATCH_SIZE, LR_LOCAL, ALPHA, K))
         server.global_train()
         server.save_result(client_addition=f"_{ALPHA}a_{K}k")
     
@@ -93,12 +100,22 @@ def main() -> None:
         server = pFedMeServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, BETA)
         if dataset == "mnist":
             CLIENT_NUM = 10
-            for i in range(CLIENT_NUM):
-                server.add_client(pFedMeClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE,
-                                               LAMDA, K, LR_LOCAL))
+        for i in range(CLIENT_NUM):
+            server.add_client(pFedMeClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE,
+                                            LAMDA, K, LR_LOCAL))
         server.global_train()
         server.save_result(server_addition=f"_{BETA}b", client_addition=f"_{LAMDA}l_{K}k")
 
+    elif algorithm == "FedMGDA+":
+        LR_GLOBAL = 1
+        LR_LOCAL = 1e-3
+        server = FedMGDAServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
+        if dataset == "mnist":
+            CLIENT_NUM = 10
+        for i in range(CLIENT_NUM):
+            server.add_client(FedMGDAClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL))
+        server.global_train()
+        server.save_result()
 
 if __name__ == "__main__":
     start_time = time()

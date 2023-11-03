@@ -192,8 +192,6 @@ class BaseServer(ABC):
             train_sample_num.append(client_train_num)
             test_acc.append(client_test_acc)
             test_sample_num.append(client_test_num)
-        
-        print(f"train_acc = {train_acc}")
 
         train_acc = np.asarray(train_acc)
         train_loss = np.asarray(train_loss)
