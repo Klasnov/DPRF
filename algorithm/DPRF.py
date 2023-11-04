@@ -52,7 +52,7 @@ class DPRFClient(BaseClient):
 
     def local_train(self) -> None:
         self.local_update.clear()
-        for i in range(self.local_epoch):
+        for _ in range(self.local_epoch):
             self.update_per_model()
             self.update_local_model()
         for param_local, param_global in zip(self.local_model.parameters(), self.global_model):

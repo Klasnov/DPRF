@@ -4,14 +4,12 @@ import torch.nn.functional as F
 from copy import deepcopy
 from .base import BaseClient, BaseServer
 
-
-class pFedMeClient(BaseClient):
+class DittoClient(BaseClient):
     def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
-                 local_epoch: int, local_batch_size: int, lamda: float, k: int, lr_local: float):
+                 local_epoch: int, local_batch_size: int, lamda: float, lr_local: float):
         super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
         self.global_model = deepcopy(list(model.parameters()))
         self.lamda: float = lamda
-        self.k: int = k
 
     def calculate_grad_per(self, inputs: torch.Tensor, labels: torch.Tensor) -> list[torch.Tensor]:
         grads: list[torch.Tensor] = []
@@ -37,13 +35,11 @@ class pFedMeClient(BaseClient):
 
     def update_per_model(self) -> None:
         self.personal_model.train()
-        count = 0
-        while count < self.k:
-            count += 1
-            inputs, labels = self.get_train_batch()
-            grad_h = self.calculate_grad_local(inputs, labels)
-            for param_per, grad in zip(self.personal_model.parameters(), grad_h):
-                param_per.data -= self.lr_local * grad
+        inputs, labels = self.get_train_batch()
+        grad_h = self.calculate_grad_local(inputs, labels)
+        for param_per, grad in zip(self.personal_model.parameters(), grad_h):
+            param_per.data -= self.lr_local * grad
+            
 
     def update_local_model(self) -> None:
         for param_local, param_per in zip(self.local_model.parameters(), self.personal_model.parameters()):
@@ -58,19 +54,18 @@ class pFedMeClient(BaseClient):
         return self.local_model
 
 
-class pFedMeServer(BaseServer):
+class DittoServer(BaseServer):
     def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_g: float,
-                 user_selection_ratio: float, round: int, beta: float):
+                 user_selection_ratio: float, round: int):
         super().__init__(algorithm, dataset, device, model, lr_g, user_selection_ratio, round)
-        self.clients: list[pFedMeClient] = []
-        self.beta: float = beta
+        self.clients: list[DittoClient] = []
 
     def update_global_model(self) -> None:
-        clients_selected: list[pFedMeClient] = self.select_clients()
-        s = len(clients_selected)
+        clients_selected: list[DittoClient] = self.select_clients()
+        n = len(clients_selected)
         params_clients: list[torch.Tensor] = [torch.zeros_like(global_param) for global_param in self.global_model.parameters()]
         for client in clients_selected:
             for param_clients, param_client in zip(params_clients, client.get_local_model().parameters()):
-                param_clients += param_client / s
+                param_clients += param_client / n
         for para_global, param_clients in zip(self.global_model.parameters(), params_clients):
-            para_global.data = (1 - self.beta) * para_global + self.beta * param_clients
+            para_global.data = param_clients

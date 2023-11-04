@@ -3,6 +3,7 @@ from time import time
 from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
+from algorithm.Ditto import DittoClient, DittoServer
 from utils.util_models import Minst_Model
 
 def main() -> None:
@@ -38,42 +39,42 @@ def main() -> None:
     # Model instantiation
     if dataset == "mnist":
         model = Minst_Model()
+        CLIENT_NUM = 10
 
     # Algorithm selection
-    # while True:
-    #     print("Select the algorithm for training.")
-    #     print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
-    #     print("A. DPRF")
-    #     print("B. pFedMe")
-    #     print("C. FedMGDA+")
-    #     print("D. APPLE")
-    #     print("E. FedFomo")
-    #     algorithm_choice = input("Your choice: ").lower()
+    while True:
+        print("Select the algorithm for training.")
+        print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
+        print("A. DPRF")
+        print("B. pFedMe")
+        print("C. FedMGDA+")
+        print("D. APPLE")
+        print("E. FedFomo")
+        algorithm_choice = input("Your choice: ").lower()
 
-    #     if algorithm_choice == 'a':
-    #         algorithm = "DPRF"
-    #         break
-    #     elif algorithm_choice == 'b':
-    #         algorithm = "pFedMe"
-    #         break
-    #     elif algorithm_choice == 'c':
-    #         algorithm = "FedMGDA+"
-    #         break
-    #     elif algorithm_choice == 'd':
-    #         algorithm = "APPLE"
-    #         break
-    #     elif algorithm_choice == 'e':
-    #         algorithm = "APPLE"
-    #         break
-    #     else:
-    #         print("Invalid algorithm choice.")
-    #         print()
-    # print()
-    algorithm = "FedMGDA+"
+        if algorithm_choice == 'a':
+            algorithm = "DPRF"
+            break
+        elif algorithm_choice == 'b':
+            algorithm = "pFedMe"
+            break
+        elif algorithm_choice == 'c':
+            algorithm = "FedMGDA+"
+            break
+        elif algorithm_choice == 'd':
+            algorithm = "Ditto"
+            break
+        elif algorithm_choice == 'e':
+            algorithm = "FedFomo"
+            break
+        else:
+            print("Invalid algorithm choice.")
+            print()
+    print()
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 100
+    ROUND_NUM = 50
     LOCAL_EPOCH = 10
     LOCAL_BATCH_SIZE = 64
 
@@ -83,8 +84,6 @@ def main() -> None:
         ALPHA = 95
         K = 15
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
-        if dataset == "mnist":
-            CLIENT_NUM = 10
         for i in range(CLIENT_NUM):
             server.add_client(DPRFClient(i, algorithm, dataset, device, model, LOCAL_EPOCH,
                                             LOCAL_BATCH_SIZE, LR_LOCAL, ALPHA, K))
@@ -98,8 +97,6 @@ def main() -> None:
         K = 5
         BETA = 2
         server = pFedMeServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, BETA)
-        if dataset == "mnist":
-            CLIENT_NUM = 10
         for i in range(CLIENT_NUM):
             server.add_client(pFedMeClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE,
                                             LAMDA, K, LR_LOCAL))
@@ -110,10 +107,18 @@ def main() -> None:
         LR_GLOBAL = 0.1
         LR_LOCAL = 1e-3
         server = FedMGDAServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
-        if dataset == "mnist":
-            CLIENT_NUM = 10
         for i in range(CLIENT_NUM):
             server.add_client(FedMGDAClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL))
+        server.global_train()
+        server.save_result()
+    
+    elif algorithm == "Ditto":
+        LR_GLOBAL = 1e-3
+        LR_LOCAL = 1e-3
+        LAMDA = 1
+        server = DittoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
+        for i in range(CLIENT_NUM):
+            server.add_client(DittoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LAMDA, LR_LOCAL))
         server.global_train()
         server.save_result()
 
