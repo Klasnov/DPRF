@@ -35,7 +35,7 @@ class FedMGDAClient(BaseClient):
             self.updates.append(param_global - param_local)
     
     def get_update(self):
-        return self.params_global
+        return self.updates
     
 class FedMGDAServer(BaseServer):
     def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module,
@@ -63,7 +63,7 @@ class FedMGDAServer(BaseServer):
                 zero_update = torch.zeros_like(update_flatten)
                 norm_updates.append(zero_update.numpy())
             else:
-                norm_updates.append((update_flatten / norm).numpy())
+                norm_updates.append((update_flatten / norm).detach().numpy())
         norm_updates = np.asarray(norm_updates)
         
         weights = cp.Variable(len(clients_selected))

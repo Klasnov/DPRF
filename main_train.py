@@ -42,44 +42,45 @@ def main() -> None:
         CLIENT_NUM = 10
 
     # Algorithm selection
-    while True:
-        print("Select the algorithm for training.")
-        print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
-        print("A. DPRF")
-        print("B. pFedMe")
-        print("C. FedMGDA+")
-        print("D. APPLE")
-        print("E. FedFomo")
-        algorithm_choice = input("Your choice: ").lower()
+    # while True:
+    #     print("Select the algorithm for training.")
+    #     print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
+    #     print("A. DPRF")
+    #     print("B. pFedMe")
+    #     print("C. FedMGDA+")
+    #     print("D. APPLE")
+    #     print("E. FedFomo")
+    #     algorithm_choice = input("Your choice: ").lower()
 
-        if algorithm_choice == 'a':
-            algorithm = "DPRF"
-            break
-        elif algorithm_choice == 'b':
-            algorithm = "pFedMe"
-            break
-        elif algorithm_choice == 'c':
-            algorithm = "FedMGDA+"
-            break
-        elif algorithm_choice == 'd':
-            algorithm = "Ditto"
-            break
-        elif algorithm_choice == 'e':
-            algorithm = "FedFomo"
-            break
-        else:
-            print("Invalid algorithm choice.")
-            print()
-    print()
+    #     if algorithm_choice == 'a':
+    #         algorithm = "DPRF"
+    #         break
+    #     elif algorithm_choice == 'b':
+    #         algorithm = "pFedMe"
+    #         break
+    #     elif algorithm_choice == 'c':
+    #         algorithm = "FedMGDA+"
+    #         break
+    #     elif algorithm_choice == 'd':
+    #         algorithm = "Ditto"
+    #         break
+    #     elif algorithm_choice == 'e':
+    #         algorithm = "FedFomo"
+    #         break
+    #     else:
+    #         print("Invalid algorithm choice.")
+    #         print()
+    # print()
+    algorithm = "Ditto"
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 50
+    ROUND_NUM = 300
     LOCAL_EPOCH = 10
     LOCAL_BATCH_SIZE = 64
 
     if algorithm == "DPRF":
-        LR_GLOBAL = 1
+        LR_GLOBAL = 0.5
         LR_LOCAL = 1e-3
         ALPHA = 95
         K = 15
@@ -104,7 +105,7 @@ def main() -> None:
         server.save_result(server_addition=f"_{BETA}b", client_addition=f"_{LAMDA}l_{K}k")
 
     elif algorithm == "FedMGDA+":
-        LR_GLOBAL = 0.1
+        LR_GLOBAL = 1
         LR_LOCAL = 1e-3
         server = FedMGDAServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
@@ -113,7 +114,7 @@ def main() -> None:
         server.save_result()
     
     elif algorithm == "Ditto":
-        LR_GLOBAL = 1e-3
+        LR_GLOBAL = 0
         LR_LOCAL = 1e-3
         LAMDA = 1
         server = DittoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
