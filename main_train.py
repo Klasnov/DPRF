@@ -73,8 +73,8 @@ def main() -> None:
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 50
-    LOCAL_EPOCH = 20
+    ROUND_NUM = 100
+    LOCAL_EPOCH = 10
     LOCAL_BATCH_SIZE = 64
 
     if algorithm == "DPRF":
@@ -107,7 +107,7 @@ def main() -> None:
         server.save_result(server_addition=f"_{BETA}b", client_addition=f"_{LAMDA}l_{K}k")
 
     elif algorithm == "FedMGDA+":
-        LR_GLOBAL = 1
+        LR_GLOBAL = 0.1
         LR_LOCAL = 1e-3
         server = FedMGDAServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         if dataset == "mnist":
