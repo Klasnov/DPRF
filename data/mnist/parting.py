@@ -27,7 +27,7 @@ label_to_indices = {label: np.where(y_train == label)[0] for label in range(10)}
 
 # Generate random allocation vector for each label
 n_clients = 10
-np.random.seed(1)
+np.random.seed(6)
 allocation_vectors = {label: np.random.randint(0, n_clients, size=len(indices)) for label, indices in label_to_indices.items()}
 
 # Split training data among clients based on allocation vectors
