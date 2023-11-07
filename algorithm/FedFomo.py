@@ -87,7 +87,7 @@ class FedFomoServer(BaseServer):
             param_global.data = torch.zeros_like(param_global).data
         for i, client in enumerate(self.clients):
             for param_global, param_client in zip(self.global_model.parameters(), self.models[i].parameters()):
-                param_global.data = param_client * client.get_train_num() / total_train_num
+                param_global.data += param_client * client.get_train_num() / total_train_num
 
     def global_train(self) -> None:
         for i in range(self.round):

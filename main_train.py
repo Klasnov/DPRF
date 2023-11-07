@@ -41,7 +41,7 @@ def console() -> tuple[str, str]:
         print("A. DPRF")
         print("B. pFedMe")
         print("C. FedMGDA+")
-        print("D. APPLE")
+        print("D. Ditto")
         print("E. FedFomo")
         algorithm_choice = input("Your choice: ").lower()
 
@@ -85,7 +85,7 @@ def main(dataset: str, algorithm: str) -> None:
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 500
+    ROUND_NUM = 20
     LOCAL_EPOCH = 10
     LOCAL_BATCH_SIZE = 64
 
@@ -134,7 +134,7 @@ def main(dataset: str, algorithm: str) -> None:
         server.save_result()
     
     else:
-        SELECT_RATIO = 0.6
+        SELECT_RATIO = 0.5
         LR_GLOBAL = 0
         LR_LOCAL = 1e-3
         server = FedFomoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, CLIENT_NUM)
@@ -149,4 +149,4 @@ def main(dataset: str, algorithm: str) -> None:
 
 
 if __name__ == "__main__":
-    main("cifar10", "DPRF")
+    main("mnist", "FedFomo")
