@@ -5,7 +5,7 @@ from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
 from algorithm.Ditto import DittoClient, DittoServer
 from algorithm.FedFomo import FedFomoClient, FedFomoServer
-from utils.util_models import Minst_Model
+from utils.util_models import Minst_Model, Cifar10_Model, Emnist_Model
 
 
 def console() -> tuple[str, str]:
@@ -27,7 +27,7 @@ def console() -> tuple[str, str]:
             dataset = "cifar10"
             break
         elif dataset_choice == 'c':
-            dataset = "cifar100"
+            dataset = "emnist"
             break
         else:
             print("Invalid dataset choice.")
@@ -76,6 +76,12 @@ def main(dataset: str, algorithm: str) -> None:
     if dataset == "mnist":
         model = Minst_Model()
         CLIENT_NUM = 10
+    elif dataset == "cifar10":
+        model = Cifar10_Model()
+        CLIENT_NUM = 20
+    else:
+        model = Emnist_Model()
+        CLIENT_NUM = 50
 
     # Hyperparameters
     SELECT_RATIO = 0.3
@@ -143,4 +149,4 @@ def main(dataset: str, algorithm: str) -> None:
 
 
 if __name__ == "__main__":
-    main("mnist", "FedFomo")
+    main("cifar10", "DPRF")
