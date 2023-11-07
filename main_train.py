@@ -6,72 +6,75 @@ from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
 from algorithm.Ditto import DittoClient, DittoServer
 from utils.util_models import Minst_Model
 
-def main() -> None:
-    torch.manual_seed(0)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # print("Welcome to Personalized Federated Learning Program!")
-    # print("Please follow the prompts to select the dataset and algorithm for training.")
-    # print()
+def console() -> tuple[str, str]:
+    print("Welcome to Personalized Federated Learning Program!")
+    print("Please follow the prompts to select the dataset and algorithm for training.")
+    print()
 
     # Dataset selection
-    # while True:
-    #     print("Select the dataset.")
-    #     print("For example, enter A or a to indicate that the MNIST dataset is selected.")
-    #     print("A. MNIST")
-    #     print("B. Cifar10")
-    #     dataset_choice = input("Your choice: ").lower()
-    #     if dataset_choice == 'a':
-    #         dataset = "mnist"
-    #         break
-    #     elif dataset_choice == 'b':
-    #         dataset = "cifar10"
-    #         break
-    #     elif dataset_choice == 'c':
-    #         dataset = "cifar100"
-    #         break
-    #     else:
-    #         print("Invalid dataset choice.")
-    #         print()
-    # print()
-    dataset = "mnist"
+    while True:
+        print("Select the dataset.")
+        print("For example, enter A or a to indicate that the MNIST dataset is selected.")
+        print("A. MNIST")
+        print("B. Cifar10")
+        dataset_choice = input("Your choice: ").lower()
+        if dataset_choice == 'a':
+            dataset = "mnist"
+            break
+        elif dataset_choice == 'b':
+            dataset = "cifar10"
+            break
+        elif dataset_choice == 'c':
+            dataset = "cifar100"
+            break
+        else:
+            print("Invalid dataset choice.")
+            print()
+    print()
+
+    # Algorithm selection
+    while True:
+        print("Select the algorithm for training.")
+        print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
+        print("A. DPRF")
+        print("B. pFedMe")
+        print("C. FedMGDA+")
+        print("D. APPLE")
+        print("E. FedFomo")
+        algorithm_choice = input("Your choice: ").lower()
+
+        if algorithm_choice == 'a':
+            algorithm = "DPRF"
+            break
+        elif algorithm_choice == 'b':
+            algorithm = "pFedMe"
+            break
+        elif algorithm_choice == 'c':
+            algorithm = "FedMGDA+"
+            break
+        elif algorithm_choice == 'd':
+            algorithm = "Ditto"
+            break
+        elif algorithm_choice == 'e':
+            algorithm = "FedFomo"
+            break
+        else:
+            print("Invalid algorithm choice.")
+            print()
+    print()
+
+    return dataset, algorithm
+
+def main(dataset: str, algorithm: str) -> None:
+    torch.manual_seed(0)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    start_time = time()
 
     # Model instantiation
     if dataset == "mnist":
         model = Minst_Model()
         CLIENT_NUM = 10
-
-    # Algorithm selection
-    # while True:
-    #     print("Select the algorithm for training.")
-    #     print("For example, enter A or a to indicate that the pFMeMo algorithm is selected.")
-    #     print("A. DPRF")
-    #     print("B. pFedMe")
-    #     print("C. FedMGDA+")
-    #     print("D. APPLE")
-    #     print("E. FedFomo")
-    #     algorithm_choice = input("Your choice: ").lower()
-
-    #     if algorithm_choice == 'a':
-    #         algorithm = "DPRF"
-    #         break
-    #     elif algorithm_choice == 'b':
-    #         algorithm = "pFedMe"
-    #         break
-    #     elif algorithm_choice == 'c':
-    #         algorithm = "FedMGDA+"
-    #         break
-    #     elif algorithm_choice == 'd':
-    #         algorithm = "Ditto"
-    #         break
-    #     elif algorithm_choice == 'e':
-    #         algorithm = "FedFomo"
-    #         break
-    #     else:
-    #         print("Invalid algorithm choice.")
-    #         print()
-    # print()
-    algorithm = "Ditto"
 
     # Hyperparameters
     SELECT_RATIO = 0.3
@@ -122,10 +125,11 @@ def main() -> None:
             server.add_client(DittoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LAMDA, LR_LOCAL))
         server.global_train()
         server.save_result()
-
-if __name__ == "__main__":
-    start_time = time()
-    main()
+    
     end_time = time()
     print(f"\nThe totla training time is {end_time - start_time}s.")
     print()
+
+
+if __name__ == "__main__":
+    main("mnist", "Ditto")
