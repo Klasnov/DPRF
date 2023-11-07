@@ -4,6 +4,7 @@ from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
 from algorithm.Ditto import DittoClient, DittoServer
+from algorithm.FedFomo import FedFomoClient, FedFomoServer
 from utils.util_models import Minst_Model
 
 
@@ -126,10 +127,19 @@ def main(dataset: str, algorithm: str) -> None:
         server.global_train()
         server.save_result()
     
+    else:
+        LR_GLOBAL = 0
+        LR_LOCAL = 1e-3
+        server = FedFomoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, CLIENT_NUM)
+        for i in range(CLIENT_NUM):
+            server.add_client(FedFomoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL, CLIENT_NUM))
+        server.global_train()
+        server.save_result()
+    
     end_time = time()
     print(f"\nThe totla training time is {end_time - start_time}s.")
     print()
 
 
 if __name__ == "__main__":
-    main("mnist", "Ditto")
+    main("mnist", "FedFomo")
