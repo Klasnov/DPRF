@@ -27,7 +27,7 @@ label_to_indices = {label: np.where(y_train == label)[0] for label in range(10)}
 
 # Generate random allocation vector for each label
 n_clients = 10
-np.random.seed(6)
+np.random.seed(5)
 allocation_vectors = {label: np.random.randint(0, n_clients, size=len(indices)) for label, indices in label_to_indices.items()}
 
 # Split training data among clients based on allocation vectors
@@ -53,18 +53,18 @@ torch.save(torch.tensor(X_test), './data/mnist/data/x_test.pt')
 torch.save(torch.tensor(y_test), './data/mnist/data/y_test.pt')
 
 # Visualize label distribution
-label_dist_matrix = np.zeros((n_clients, 10))
+label_dist_matrix = np.zeros((10, n_clients))
 for c in range(n_clients):
     label_counts = np.bincount(y_train[client_data_idx[c]], minlength=10)
-    label_dist_matrix[c, :] = label_counts
+    label_dist_matrix[:, c] = label_counts
 
-# Plot the heatmap
-plt.figure(figsize=(10, 6))
-plt.imshow(label_dist_matrix, cmap='YlGnBu', aspect='auto')
+# Plot the heatmap with swapped axes
+plt.figure(figsize=(10, 8))
+plt.imshow(label_dist_matrix, cmap='YlGnBu', aspect='auto', origin='upper')  # Swap the x and y axis labels
 plt.colorbar(label='Label Count')
-plt.xticks(np.arange(10), np.arange(10))
-plt.yticks(np.arange(n_clients), np.arange(n_clients))
-plt.xlabel('Label')
-plt.ylabel('Client')
+plt.xticks(np.arange(n_clients), np.arange(n_clients))
+plt.yticks(np.arange(10), np.arange(10))
+plt.ylabel('Label')
+plt.xlabel('Client')
 plt.title('Label Distribution of MNIST Dataset across Clients')
 plt.show()
