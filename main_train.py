@@ -79,7 +79,7 @@ def main(dataset: str, algorithm: str) -> None:
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 300
+    ROUND_NUM = 500
     LOCAL_EPOCH = 10
     LOCAL_BATCH_SIZE = 64
 
@@ -128,8 +128,9 @@ def main(dataset: str, algorithm: str) -> None:
         server.save_result()
     
     else:
+        SELECT_RATIO = 0.6
         LR_GLOBAL = 0
-        LR_LOCAL = 1e-4
+        LR_LOCAL = 1e-3
         server = FedFomoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, CLIENT_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(FedFomoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL, CLIENT_NUM))
