@@ -32,7 +32,7 @@ class FedFomoClient(BaseClient):
             norm = torch.norm((torch.cat(param_list)), p=1)
             difference = self.loss - self.losses[i]
             weight = 0
-            if difference >= 0:
+            if difference >= 0 and norm != 0:
                 weight = difference / norm
             self.weights[i] = weight
             sum += weight
@@ -67,16 +67,27 @@ class FedFomoClient(BaseClient):
             param_local.data = param_personal.data
         return self.personal_model, torch.tensor(self.weights)
     
+    def get_train_num(self) -> int:
+        return len(self.train_full_dataloader)
+    
 
 class FedFomoServer(BaseServer):
     def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_global: float, selection_ratio: float, round: int, client_num: int):
         super().__init__(algorithm, dataset, device, model, lr_global, selection_ratio, round)
+        self.clients: list[FedFomoClient] = []
         self.models: list[nn.Module] = [self.global_model for _ in range(client_num)]
         self.p: list[torch.Tensor] = [torch.ones(client_num) for _ in range(client_num)]
-        self.down_load_num = int(len(self.clients) * self.selection_ratio)
+        self.down_load_num = int(client_num * self.selection_ratio)
     
     def update_global_model(self) -> None:
-        pass
+        total_train_num = 0
+        for client in self.clients:
+            total_train_num += client.get_train_num()
+        for param_global in self.global_model.parameters():
+            param_global.data = torch.zeros_like(param_global).data
+        for i, client in enumerate(self.clients):
+            for param_global, param_client in zip(self.global_model.parameters(), self.models[i].parameters()):
+                param_global.data = param_client * client.get_train_num() / total_train_num
 
     def global_train(self) -> None:
         for i in range(self.round):
@@ -87,7 +98,9 @@ class FedFomoServer(BaseServer):
                     models.append(self.models[index])
                 model, weights = client.local_train(models, indexs)
                 self.models[j] = model
-                self.p[j] = weights
+                if i != 0:
+                    self.p[j] = weights
+            self.update_global_model()
             self.model_evaluate()
             self.model_per_evaluate()
             self.model_global_test()

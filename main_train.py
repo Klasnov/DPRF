@@ -129,7 +129,7 @@ def main(dataset: str, algorithm: str) -> None:
     
     else:
         LR_GLOBAL = 0
-        LR_LOCAL = 1e-3
+        LR_LOCAL = 1e-4
         server = FedFomoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, CLIENT_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(FedFomoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL, CLIENT_NUM))
