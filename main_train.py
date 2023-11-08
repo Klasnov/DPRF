@@ -85,15 +85,15 @@ def main(dataset: str, algorithm: str) -> None:
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 20
-    LOCAL_EPOCH = 10
+    ROUND_NUM = 100
+    LOCAL_EPOCH = 5
     LOCAL_BATCH_SIZE = 64
 
     if algorithm == "DPRF":
-        LR_GLOBAL = 0.5
+        LR_GLOBAL = 1
         LR_LOCAL = 1e-3
-        ALPHA = 95
-        K = 15
+        ALPHA = 10
+        K = 10
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(DPRFClient(i, algorithm, dataset, device, model, LOCAL_EPOCH,
@@ -149,4 +149,4 @@ def main(dataset: str, algorithm: str) -> None:
 
 
 if __name__ == "__main__":
-    main("cifar10", "pFedMe")
+    main("mnist", "DPRF")

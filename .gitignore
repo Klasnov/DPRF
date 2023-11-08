@@ -206,3 +206,10 @@ data/mnist/data/MNIST/raw/train-images-idx3-ubyte
 data/mnist/data/MNIST/raw/train-images-idx3-ubyte.gz
 data/mnist/data/MNIST/raw/train-labels-idx1-ubyte
 data/mnist/data/MNIST/raw/train-labels-idx1-ubyte.gz
+algorithm/__pycache__/base.cpython-311.pyc
+algorithm/__pycache__/Ditto.cpython-311.pyc
+algorithm/__pycache__/DPRF.cpython-311.pyc
+algorithm/__pycache__/FedFomo.cpython-311.pyc
+algorithm/__pycache__/FedMGDA.cpython-311.pyc
+algorithm/__pycache__/pFedMe.cpython-311.pyc
+result/DPRF/mnist_100r_1lg_5epc_64bch_0.001ll_10a_10k.csv

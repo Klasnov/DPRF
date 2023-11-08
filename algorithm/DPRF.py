@@ -110,7 +110,7 @@ class DPRFServer(BaseServer):
         else:
             for i in range(len(weights)):
                 weights[i] = 1 / len(clients_selected)
-        return updates, weights
+        return norm_updates, weights
 
     def update_global_model(self) -> None:
         clients_updates, weights = self.calculate_weights()
@@ -118,6 +118,11 @@ class DPRFServer(BaseServer):
         for client_updates, weight in zip(clients_updates, weights):
             for global_update, client_update in zip(global_updates, client_updates):
                 global_update += client_update * weight
+        
+        norm_sum = 0
+        for global_update in global_updates:
+            norm_sum += torch.norm(global_update, p=1)
+        print(f"norm_sum = {norm_sum}")
         
         for global_param, global_update in zip(self.global_model.parameters(), global_updates):
             global_param.data += self.lr_global * global_update
