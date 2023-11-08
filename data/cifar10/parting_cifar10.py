@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 import os
 import random
 
-if not os.path.exists('./data/cifar10/data'):
-    os.makedirs('./data/cifar10/data')
+if not os.path.exists('./data/cifar10/data/CIFAR-10'):
+    os.makedirs('./data/cifar10/data/CIFAR-10')
 
 # Load CIFAR-10 dataset
 transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-cifar10_trainset = datasets.CIFAR10(root='./data/cifar10/data', train=True, download=True, transform=transform)
-cifar10_testset = datasets.CIFAR10(root='./data/cifar10/data', train=False, download=True, transform=transform)
+cifar10_trainset = datasets.CIFAR10(root='./data/cifar10/data/CIFAR-10', train=True, download=True, transform=transform)
+cifar10_testset = datasets.CIFAR10(root='./data/cifar10/data/CIFAR-10', train=False, download=True, transform=transform)
 
 X_train = np.array(cifar10_trainset.data)
 y_train = np.array(cifar10_trainset.targets)
