@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from copy import deepcopy
 from abc import ABC, abstractclassmethod
-from torch.utils.data import DataLoader, TensorDataset, random_split
+from torch.utils.data import DataLoader, TensorDataset
 
 class BaseClient(ABC):
     def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
