@@ -68,10 +68,16 @@ def console() -> tuple[str, str]:
 
     return dataset, algorithm
 
-def main(dataset: str, algorithm: str) -> None:
+def main(dataset: str,
+         algorithm: str,
+         epoch: int = 10,
+         lr_global: float = 1,
+         alpha: int = 10, 
+         k: int = 10) -> float:
+    
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    start_time = time()
+    # start_time = time()
 
     # Model instantiation
     if dataset == "mnist":
@@ -87,18 +93,18 @@ def main(dataset: str, algorithm: str) -> None:
     # Hyperparameters
     SELECT_RATIO = 0.3
     ROUND_NUM = 600
-    LOCAL_EPOCH = 10
-    LOCAL_BATCH_SIZE = 32
+    EPOCH = epoch
+    BATCH_SIZE = 32
 
     if algorithm == "DPRF":
-        LR_GLOBAL = 1
+        LR_GLOBAL = lr_global
         LR_LOCAL = 1e-3
-        ALPHA = 10
-        K = 10
+        ALPHA = alpha
+        K = k
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
-            server.add_client(DPRFClient(i, algorithm, dataset, device, model, LOCAL_EPOCH,
-                                            LOCAL_BATCH_SIZE, LR_LOCAL, ALPHA, K))
+            server.add_client(DPRFClient(i, algorithm, dataset, device, model, EPOCH,
+                                            BATCH_SIZE, LR_LOCAL, ALPHA, K))
         server.global_train()
         server.save_result(client_addition=f"_{ALPHA}a_{K}k")
     
@@ -110,7 +116,7 @@ def main(dataset: str, algorithm: str) -> None:
         BETA = 2
         server = pFedMeServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, BETA)
         for i in range(CLIENT_NUM):
-            server.add_client(pFedMeClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE,
+            server.add_client(pFedMeClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE,
                                             LAMDA, K, LR_LOCAL))
         server.global_train()
         server.save_result(server_addition=f"_{BETA}b", client_addition=f"_{LAMDA}l_{K}k")
@@ -120,7 +126,7 @@ def main(dataset: str, algorithm: str) -> None:
         LR_LOCAL = 1e-3
         server = FedMGDAServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
-            server.add_client(FedMGDAClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL))
+            server.add_client(FedMGDAClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LR_LOCAL))
         server.global_train()
         server.save_result()
     
@@ -130,7 +136,7 @@ def main(dataset: str, algorithm: str) -> None:
         LAMDA = 1
         server = DittoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
-            server.add_client(DittoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LAMDA, LR_LOCAL))
+            server.add_client(DittoClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LAMDA, LR_LOCAL))
         server.global_train()
         server.save_result(server_addition=f"_{LAMDA}l")
     
@@ -140,16 +146,37 @@ def main(dataset: str, algorithm: str) -> None:
         LR_LOCAL = 1e-3
         server = FedFomoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, CLIENT_NUM)
         for i in range(CLIENT_NUM):
-            server.add_client(FedFomoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL, CLIENT_NUM))
+            server.add_client(FedFomoClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LR_LOCAL, CLIENT_NUM))
         server.global_train()
         server.save_result(server_addition=f"_{SELECT_RATIO}r")
     
-    end_time = time()
-    print(f"\nThe totla training time is {end_time - start_time}s.")
-    print()
+    # end_time = time()
+    # print(f"\nThe totla training time is {end_time - start_time}s.")
+    # print()
+
+    return max(server.global_accuracies)
 
 
 if __name__ == "__main__":
-    # dataset, algorithm = console()
-    # main(dataset, algorithm)
-    main("mnist", "DPRF")
+    max_acc = 0
+    max_arg = {"epoch": 0, "lr_global": 0, "alpha": 0, "k": 0}
+    for epoch in range(5, 30, 5):
+        for lr_global in range(0.25, 2.25, 0.25):
+            for alpha in range(5, 40, 5):
+                for k in range(5, 30, 5):
+                    acc = main("mnist", "DPRF", epoch, lr_global, alpha, k)
+                    if acc > max_acc:
+                        max_acc = acc
+                        max_arg["epoch"] = 5 if epoch > 15 else epoch
+                        max_arg["lr_global"] = 1 if lr_global > 1.5 else lr_global
+                        max_arg["alpha"] = 15 if alpha > 25 else alpha
+                        max_arg["k"] = 10 if k > 20 else k
+    for dataset in ["mnist", "cifar10", "emnist"]:
+        for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
+            if algorithm == "DPRF":
+                if dataset == "mnist":
+                    continue
+                else:
+                    main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"])
+            else:
+                main(dataset, algorithm, epoch=max_arg["epoch"])
