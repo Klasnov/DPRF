@@ -208,6 +208,13 @@ class BaseServer(ABC):
             test_acc.append(client_test_acc)
             test_loss.append(client_test_loss)
             test_sample_num.append(client_test_num)
+        
+        train_acc = np.asarray(train_acc)
+        train_loss = np.asarray(train_loss)
+        test_acc = np.asarray(test_acc)
+        train_sample_num = np.asarray(train_sample_num)
+        test_sample_num = np.asarray(test_sample_num)
+        test_loss = np.asarray(test_loss)
 
         train_total_num = np.sum(train_sample_num)
         test_total_num = np.sum(test_sample_num)
@@ -229,7 +236,12 @@ class BaseServer(ABC):
             test_per_loss.append(per_loss)
             test_sample_num.append(sample_num)
         
+        test_per_acc = np.asarray(test_per_acc)
+        test_sample_num = np.asarray(test_sample_num)
+        test_per_loss = np.asarray(test_per_loss)
+        
         test_total_num = np.sum(test_sample_num)
+
         self.personal_accuracies.append(np.sum(test_per_acc * test_sample_num / test_total_num))
         self.test_std_devs.append(np.std(test_per_loss))
 
