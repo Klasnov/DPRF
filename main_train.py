@@ -87,7 +87,7 @@ def main(dataset: str, algorithm: str) -> None:
     # Hyperparameters
     SELECT_RATIO = 0.3
     ROUND_NUM = 600
-    LOCAL_EPOCH = 5
+    LOCAL_EPOCH = 10
     LOCAL_BATCH_SIZE = 32
 
     if algorithm == "DPRF":
@@ -132,7 +132,7 @@ def main(dataset: str, algorithm: str) -> None:
         for i in range(CLIENT_NUM):
             server.add_client(DittoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LAMDA, LR_LOCAL))
         server.global_train()
-        server.save_result()
+        server.save_result(server_addition=f"_{LAMDA}l")
     
     else:
         SELECT_RATIO = 0.5
@@ -142,7 +142,7 @@ def main(dataset: str, algorithm: str) -> None:
         for i in range(CLIENT_NUM):
             server.add_client(FedFomoClient(i, algorithm, dataset, device, model, LOCAL_EPOCH, LOCAL_BATCH_SIZE, LR_LOCAL, CLIENT_NUM))
         server.global_train()
-        server.save_result()
+        server.save_result(server_addition=f"_{SELECT_RATIO}r")
     
     end_time = time()
     print(f"\nThe totla training time is {end_time - start_time}s.")
