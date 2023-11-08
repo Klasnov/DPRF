@@ -1,4 +1,6 @@
 import torch
+import cvxpy as cp
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from copy import deepcopy
@@ -79,38 +81,37 @@ class DPRFServer(BaseServer):
                 update_flatten.append(param_update.flatten())
             updates_flatten.append(torch.cat(update_flatten))
         
-        norm_updates: list[torch.Tensor] = []
+        norm_updates: list[np.ndarray] = []
         for update_flatten in updates_flatten:
             norm = torch.norm(update_flatten, p=1)
             if norm == 0:
                 zero_update = torch.zeros_like(update_flatten)
-                norm_updates.append(zero_update)
+                norm_updates.append(zero_update.numpy())
             else:
-                norm_updates.append(update_flatten / norm)
+                norm_updates.append((update_flatten / norm).detach().numpy())
+        norm_updates = np.asarray(norm_updates)
         
-        norms: list[torch.Tensor] = []
-        for norm_update in norm_updates:
-            norms.append(torch.norm(norm_update, p=1))
+        weights = cp.Variable(len(clients_selected))
+        objective = cp.Minimize(cp.norm(norm_updates.T @ weights, "fro") ** 2)
+        constraints = [weights >= 0, cp.sum(weights) == 1]
+        problem = cp.Problem(objective, constraints)
+        problem.solve(solver=cp.ECOS)
 
-        num_nonzero = 0
-        for norm in norms:
-            if norm != 0:
-                num_nonzero += 1
+        restored_updates: list[list[torch.Tensor]] = []
+        client_idx = 0
+        for update in updates:
+            restored_update: list[torch.Tensor] = []
+            param_idx = 0
+            for param_update in update:
+                shape = param_update.shape
+                flat_size = param_update.numel()
+                restored_param_update = torch.from_numpy(norm_updates[client_idx][param_idx : param_idx + flat_size].reshape(shape))
+                restored_update.append(restored_param_update)
+                param_idx += flat_size
+            client_idx += 1
+            restored_updates.append(restored_update)
 
-        weights = torch.zeros(len(clients_selected))
-        if num_nonzero >= 2:
-            for i in range(len(weights)):
-                if norms[i] == 0:
-                    continue
-                sum = 0
-                for j in range(len(norms)):
-                    if norms[j] != 0:
-                        sum += 1 / norms[j]
-                weights[i] = (1 / norms[i]) / sum
-        else:
-            for i in range(len(weights)):
-                weights[i] = 1 / len(clients_selected)
-        return norm_updates, weights
+        return restored_updates, torch.from_numpy(weights.value)
 
     def update_global_model(self) -> None:
         clients_updates, weights = self.calculate_weights()
@@ -118,11 +119,6 @@ class DPRFServer(BaseServer):
         for client_updates, weight in zip(clients_updates, weights):
             for global_update, client_update in zip(global_updates, client_updates):
                 global_update += client_update * weight
-        
-        norm_sum = 0
-        for global_update in global_updates:
-            norm_sum += torch.norm(global_update, p=1)
-        print(f"norm_sum = {norm_sum}")
         
         for global_param, global_update in zip(self.global_model.parameters(), global_updates):
             global_param.data += self.lr_global * global_update

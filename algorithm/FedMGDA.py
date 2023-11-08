@@ -95,11 +95,6 @@ class FedMGDAServer(BaseServer):
             for global_update, client_update in zip(global_updates, client_updates):
                 global_update += client_update * weight
         
-        norm_sum = 0
-        for global_update in global_updates:
-            norm_sum += torch.norm(global_update, p=1)
-        print(f"norm_sum = {norm_sum}")
-        
         for global_param, global_update in zip(self.global_model.parameters(), global_updates):
             global_param.data += self.lr_global * global_update
         
