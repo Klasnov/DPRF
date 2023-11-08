@@ -149,4 +149,4 @@ def main(dataset: str, algorithm: str) -> None:
 
 
 if __name__ == "__main__":
-    main("mnist", "FedFomo")
+    main("cifar10", "pFedMe")

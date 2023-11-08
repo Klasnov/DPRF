@@ -21,8 +21,8 @@ class BaseClient(ABC):
         self.local_model = deepcopy(model).to(self.device)
         self.personal_model = deepcopy(model).to(self.device)
 
-        data = torch.load(f'./data/{dataset}/data/client{client_id}/x.pt')
-        labels = torch.load(f'./data/{dataset}/data/client{client_id}/y.pt')
+        data = torch.load(f'./data/{dataset}/data/client{client_id}/x.pt').to(torch.float32)
+        labels = torch.load(f'./data/{dataset}/data/client{client_id}/y.pt').to(torch.int64)
         train_size = int(0.8 * len(data))
         test_size = len(data) - train_size
         train_dataset, test_dataset = random_split(TensorDataset(data, labels), [train_size, test_size])
@@ -141,8 +141,8 @@ class BaseServer(ABC):
         self.local_accuracies = []
         self.personalized_accuracies = []
         self.global_accuracies = []
-        self.test_data = torch.load(f'./data/{dataset}/data/x_test.pt')
-        self.test_labels = torch.load(f'./data/{dataset}/data/y_test.pt')
+        self.test_data = torch.load(f'./data/{dataset}/data/x_test.pt').to(torch.float32)
+        self.test_labels = torch.load(f'./data/{dataset}/data/y_test.pt').to(torch.int64)
         self.test_dataloader = DataLoader(TensorDataset(self.test_data, self.test_labels),
                                           batch_size=len(self.test_data), shuffle=False)
         
