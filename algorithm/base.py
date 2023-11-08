@@ -22,15 +22,13 @@ class BaseClient(ABC):
         self.local_model = deepcopy(model).to(self.device)
         self.personal_model = deepcopy(model).to(self.device)
 
-        data = torch.load(f'./data/{dataset}/data/client{client_id}/x.pt').to(torch.float32)
-        labels = torch.load(f'./data/{dataset}/data/client{client_id}/y.pt').to(torch.int64)
-        train_size = int(0.8 * len(data))
-        test_size = len(data) - train_size
-        train_dataset, test_dataset = random_split(TensorDataset(data, labels), [train_size, test_size])
-        self.train_data = train_dataset.dataset.tensors[0]
-        self.train_labels = train_dataset.dataset.tensors[1]
-        self.test_data = test_dataset.dataset.tensors[0]
-        self.test_labels = test_dataset.dataset.tensors[1]
+        self.train_data = torch.load(f'./data/{dataset}/data/client{client_id}/x.pt').to(torch.float32)
+        self.train_labels = torch.load(f'./data/{dataset}/data/client{client_id}/y.pt').to(torch.int64)
+        train_dataset = TensorDataset(self.train_data, self.train_labels)
+
+        self.test_data = torch.load(f'./data/{dataset}/data/x_test.pt').to(torch.float32)
+        self.test_labels = torch.load(f'./data/{dataset}/data/y_test.pt').to(torch.int64)
+        test_dataset = TensorDataset(self.test_data, self.test_labels)
 
         self.train_dataloader = DataLoader(train_dataset, batch_size=local_batch_size, shuffle=True)
         self.test_dataloader = DataLoader(test_dataset, batch_size=local_batch_size, shuffle=False)
@@ -290,4 +288,4 @@ class BaseServer(ABC):
             self.model_global_test()
             if (i + 1) % 100 == 0:
                 self.lr_decay()
-            self.print_inform()
+            self.print_inform(i)

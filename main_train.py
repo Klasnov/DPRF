@@ -19,6 +19,7 @@ def console() -> tuple[str, str]:
         print("For example, enter A or a to indicate that the MNIST dataset is selected.")
         print("A. MNIST")
         print("B. Cifar10")
+        print("C. EMNIST")
         dataset_choice = input("Your choice: ").lower()
         if dataset_choice == 'a':
             dataset = "mnist"
@@ -85,7 +86,7 @@ def main(dataset: str, algorithm: str) -> None:
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 100
+    ROUND_NUM = 600
     LOCAL_EPOCH = 5
     LOCAL_BATCH_SIZE = 32
 
@@ -149,4 +150,6 @@ def main(dataset: str, algorithm: str) -> None:
 
 
 if __name__ == "__main__":
+    # dataset, algorithm = console()
+    # main(dataset, algorithm)
     main("mnist", "DPRF")
