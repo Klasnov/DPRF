@@ -14,7 +14,7 @@ class DPRFClient(BaseClient):
         self.global_model = deepcopy(list(model.parameters()))
         self.alpha: float = alpha
         self.k: int = k
-        self.local_update: list[torch.Tensor] = list()
+        self.local_update: list[torch.Tensor] = []
 
     def calculate_grad_per(self, inputs: torch.Tensor, labels: torch.Tensor) -> list[torch.Tensor]:
         grads: list[torch.Tensor] = []
@@ -61,7 +61,13 @@ class DPRFClient(BaseClient):
             self.local_update.append((param_local - param_global) / self.local_epoch)
     
     def get_update(self) -> list[torch.Tensor]:
-        return self.local_update
+        if not self.malicious:
+            return self.local_update
+        else:
+            multi_update: list[torch.Tensor] = []
+            for update in self.local_update:
+                multi_update.append(update * 3)
+            return multi_update
 
 class DPRFServer(BaseServer):
     def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_g: float,

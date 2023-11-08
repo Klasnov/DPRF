@@ -51,7 +51,10 @@ class DittoClient(BaseClient):
             self.update_local_model()
     
     def get_local_model(self) -> nn.Module:
-        return self.local_model
+        if not self.malicious:
+            return self.local_model
+        else:
+            return self.personal_model
 
 
 class DittoServer(BaseServer):

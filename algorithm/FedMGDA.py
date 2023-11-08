@@ -35,7 +35,13 @@ class FedMGDAClient(BaseClient):
             self.updates.append(param_global - param_local)
     
     def get_update(self):
-        return self.updates
+        if not self.malicious:
+            return self.updates
+        else:
+            multi_update: list[torch.Tensor] = []
+            for update in self.updates:
+                multi_update.append(update * 3)
+            return multi_update
     
 class FedMGDAServer(BaseServer):
     def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module,

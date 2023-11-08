@@ -68,7 +68,10 @@ class FedFomoClient(BaseClient):
         return self.personal_model, torch.tensor(self.weights)
     
     def get_train_num(self) -> int:
-        return len(self.train_full_dataloader)
+        if not self.malicious:
+            return len(self.train_full_dataloader)
+        else:
+            return len(self.train_full_dataloader) * 3
     
 
 class FedFomoServer(BaseServer):
@@ -103,7 +106,7 @@ class FedFomoServer(BaseServer):
             self.update_global_model()
             self.model_evaluate()
             self.model_per_evaluate()
-            self.model_global_test()
+            self.model_global_evaluate()
             if (i + 1) % 100 == 0:
                 self.lr_decay()
             self.print_inform()
