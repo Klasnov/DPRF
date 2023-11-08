@@ -313,13 +313,17 @@ class BaseServer(ABC):
 
         for i in range(self.round):
             self.send_global_model()
+            
             for client in self.clients:
                 client.local_train()
             self.update_global_model()
+            
             self.model_evaluate()
             if self.algorithm != "FedMGDA+":
                 self.model_per_evaluate()
             self.model_global_evaluate()
-            if (i + 1) % 100 == 0:
+            
+            if (i + 1) % 150 == 0:
                 self.lr_decay()
+            
             self.print_inform(i)
