@@ -87,7 +87,7 @@ def main(dataset: str, algorithm: str) -> None:
     SELECT_RATIO = 0.3
     ROUND_NUM = 100
     LOCAL_EPOCH = 5
-    LOCAL_BATCH_SIZE = 64
+    LOCAL_BATCH_SIZE = 32
 
     if algorithm == "DPRF":
         LR_GLOBAL = 1

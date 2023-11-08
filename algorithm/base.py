@@ -17,6 +17,7 @@ class BaseClient(ABC):
         self.device: str = device
         self.local_epoch: int = local_epoch
         self.local_batch_size: int = local_batch_size
+        self.lr_local_init: float = lr_local
         self.lr_local: float = lr_local
         self.local_model = deepcopy(model).to(self.device)
         self.personal_model = deepcopy(model).to(self.device)
@@ -33,10 +34,9 @@ class BaseClient(ABC):
 
         self.train_dataloader = DataLoader(train_dataset, batch_size=local_batch_size, shuffle=True)
         self.test_dataloader = DataLoader(test_dataset, batch_size=local_batch_size, shuffle=False)
+        self.iter_train = iter(self.train_dataloader)
         self.train_full_dataloader = DataLoader(train_dataset, batch_size=len(train_dataset), shuffle=False)
         self.test_full_dataloader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False)
-        self.iter_train = iter(self.train_dataloader)
-        self.iter_test = iter(self.test_dataloader)
 
     def get_train_batch(self) -> tuple[torch.Tensor, torch.Tensor]:
         inputs: torch.Tensor
@@ -55,12 +55,17 @@ class BaseClient(ABC):
     def local_train(self) -> None:
         pass
 
+    def lr_decay(self, decay_factor: int) -> None:
+        self.lr_local = self.lr_local_init / decay_factor
+
     def train_inform(self) -> tuple[float, float, int]:
         correct_counts = 0
         losses = []
         total_samples = len(self.train_data)
         self.local_model.eval()
         with torch.no_grad():
+            inputs: torch.Tensor
+            labels: torch.Tensor
             for inputs, labels in self.train_full_dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.local_model(inputs)
@@ -75,6 +80,8 @@ class BaseClient(ABC):
         total_samples = len(self.test_data)
         self.local_model.eval()
         with torch.no_grad():
+            inputs: torch.Tensor
+            labels: torch.Tensor
             for inputs, labels in self.test_full_dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.local_model(inputs)
@@ -87,6 +94,8 @@ class BaseClient(ABC):
         total_samples = len(self.test_data)
         self.personal_model.eval()
         with torch.no_grad():
+            inputs: torch.Tensor
+            labels: torch.Tensor
             for inputs, labels in self.test_full_dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.personal_model(inputs)
@@ -132,6 +141,7 @@ class BaseServer(ABC):
         self.dataset: str = dataset
         self.device: str = device
         self.global_model = model.to(self.device)
+        self.lr_global_init: float = lr_global
         self.lr_global: float = lr_global
         self.clients: list[BaseClient] = []
         self.selection_ratio: float = selection_ratio
@@ -145,13 +155,7 @@ class BaseServer(ABC):
         self.test_labels = torch.load(f'./data/{dataset}/data/y_test.pt').to(torch.int64)
         self.test_dataloader = DataLoader(TensorDataset(self.test_data, self.test_labels),
                                           batch_size=len(self.test_data), shuffle=False)
-        
-        self.last_local_acc = 100
-        self.last_per_acc = 100
-        self.last_global_acc = 100
-        self.des_time_local_acc = 0
-        self.des_time_per_acc = 0
-        self.des_time_global_acc = 0
+        self.decay_factor = 0
 
     def add_client(self, client: BaseClient) -> None:
         self.clients.append(client)
@@ -172,10 +176,10 @@ class BaseServer(ABC):
         pass
 
     def lr_decay(self) -> None:
-        self.lr_global /= 1e2
-        print("\n** learning rate has decayed to %.7f **\n" % self.lr_global)
+        self.decay_factor += 10
+        self.lr_global = self.lr_global_init / self.decay_factor
         for client in self.clients:
-            client.lr_local /= 1e2
+            client.lr_decay(self.decay_factor)
 
     def model_evaluate(self) -> None:
         train_acc = []
@@ -228,14 +232,6 @@ class BaseServer(ABC):
                 correct_counts += correct_count
         global_acc = correct_counts / len(self.test_data)
         self.global_accuracies.append(global_acc)
-        if global_acc < self.last_global_acc:
-            self.des_time_global_acc += 1
-            if self.des_time_global_acc == 3:
-                # self.lr_decay()
-                self.des_time_global_acc -= 1
-        else:
-            self.des_time_global_acc = 0
-        self.last_global_acc = global_acc
 
     def save_result(self, server_addition: str = "", client_addition: str = "") -> None:
         result_data = {
@@ -274,6 +270,15 @@ class BaseServer(ABC):
             client.load_local_model(client_addition)
             client.load_personal_model(client_addition)
     
+    def print_inform(self, round: int) -> None:
+        print("####### Round %d (%.3f%%) ########" % ((round + 1), (round + 1) * 100 / self.round))
+        print("  - trai_acc = %.4f%%" % (self.train_accuracies[round] * 100))
+        print("  - locl_acc = %.4f%%" % (self.local_accuracies[round] * 100))
+        if self.algorithm != "FedMGDA+":
+            print("  - pern_acc = %.4f%%" % (self.personalized_accuracies[round] * 100))
+        print("  - glob_acc = %.4f%%" % (self.global_accuracies[round] * 100))
+        print()
+    
     def global_train(self) -> None:
         for i in range(self.round):
             self.send_global_model()
@@ -283,10 +288,6 @@ class BaseServer(ABC):
             self.model_evaluate()
             self.model_per_evaluate()
             self.model_global_test()
-            print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
-            print("  - trai_acc = %.4f%%" % (self.train_accuracies[i] * 100))
-            print("  - locl_acc = %.4f%%" % (self.local_accuracies[i] * 100))
-            if self.algorithm != "FedMGDA+":
-                print("  - pern_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
-            print("  - glob_acc = %.4f%%" % (self.global_accuracies[i] * 100))
-            print()
+            if (i + 1) % 100 == 0:
+                self.lr_decay()
+            self.print_inform()

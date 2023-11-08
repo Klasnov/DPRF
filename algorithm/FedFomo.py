@@ -104,9 +104,7 @@ class FedFomoServer(BaseServer):
             self.model_evaluate()
             self.model_per_evaluate()
             self.model_global_test()
-            print("####### Round %d (%.3f%%) ########" % ((i + 1), (i + 1) * 100 / self.round))
-            print("  - trai_acc = %.4f%%" % (self.train_accuracies[i] * 100))
-            print("  - locl_acc = %.4f%%" % (self.local_accuracies[i] * 100))
-            print("  - pern_acc = %.4f%%" % (self.personalized_accuracies[i] * 100))
-            print("  - glob_acc = %.4f%%" % (self.global_accuracies[i] * 100))
-            print()
+            if (i + 1) % 100 == 0:
+                self.lr_decay()
+            self.print_inform()
+            
