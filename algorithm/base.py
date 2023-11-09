@@ -114,7 +114,7 @@ class BaseClient(ABC):
         if not os.path.exists(client_model_dir):
             os.makedirs(client_model_dir)
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
-        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_local.pt"
+        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local_init}ll{client_addition}_local.pt"
         torch.save(self.local_model.state_dict(), client_model_path)
     
     def save_personal_model(self, client_addition: str = "") -> None:
@@ -122,20 +122,20 @@ class BaseClient(ABC):
         if not os.path.exists(client_model_dir):
             os.makedirs(client_model_dir)
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
-        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_personal.pt"
+        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local_init}ll{client_addition}_personal.pt"
         torch.save(self.personal_model.state_dict(), client_model_path)
     
     def load_local_model(self, client_addition: str = "") -> None:
         client_model_dir = f"./model/{self.algorithm}/clients"
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
-        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_local.pt"
+        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local_init}ll{client_addition}_local.pt"
         client_state_dict = torch.load(client_model_path)
         self.local_model.load_state_dict(client_state_dict)
     
     def load_personal_model(self, client_addition: str = "") ->None:
         client_model_dir = f"./model/{self.algorithm}/clients"
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
-        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_personal.pt"
+        client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local_init}ll{client_addition}_personal.pt"
         client_state_dict = torch.load(client_model_path)
         self.personal_model.load_state_dict(client_state_dict)
     
@@ -272,9 +272,9 @@ class BaseServer(ABC):
         result_dir = f"./result/{self.algorithm}"
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
-        server_settings = f"{self.dataset}_{self.round}r_{self.lr_global}lg{server_addition}"
+        server_settings = f"{self.dataset}_{self.round}r_{self.lr_global_init}lg{server_addition}"
         client = self.clients[0]
-        client_settings = f"{client.local_epoch}epc_{client.local_batch_size}bch_{client.lr_local}ll{client_addition}"
+        client_settings = f"{client.local_epoch}epc_{client.local_batch_size}bch_{client.lr_local_init}ll{client_addition}"
         result_file = f"{result_dir}/{server_settings}_{client_settings}.csv"
         result_df.to_csv(result_file, index=False)
     
@@ -282,7 +282,7 @@ class BaseServer(ABC):
         server_model_dir = f"./model/{self.algorithm}"
         if not os.path.exists(server_model_dir):
             os.makedirs(server_model_dir)
-        server_model_path = f"{server_model_dir}/{self.dataset}_{self.round}r_{self.lr_global}lg{server_addition}.pt"
+        server_model_path = f"{server_model_dir}/{self.dataset}_{self.round}r_{self.lr_global_init}lg{server_addition}.pt"
         torch.save(self.global_model.state_dict(), server_model_path)
         for client in self.clients:
             client.save_local_model(client_addition)
@@ -290,7 +290,7 @@ class BaseServer(ABC):
     
     def load_model(self, server_addition: str = "", client_addition: str = "") -> None:
         server_model_dir = f"./model/{self.algorithm}"
-        server_model_path = f"{server_model_dir}/{self.dataset}_{self.round}r_{self.lr_global}lg{server_addition}.pt"
+        server_model_path = f"{server_model_dir}/{self.dataset}_{self.round}r_{self.lr_global_init}lg{server_addition}.pt"
         server_state_dict = torch.load(server_model_path)
         self.global_model.load_state_dict(server_state_dict)
         for client in self.clients:
@@ -326,4 +326,4 @@ class BaseServer(ABC):
             if (i + 1) % 150 == 0:
                 self.lr_decay()
             
-            self.print_inform(i)
+            # self.print_inform(i)
