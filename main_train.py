@@ -68,7 +68,7 @@ def console():
 
     return dataset, algorithm
 
-def main(dataset, algorithm, alpha = 15, k = 5, malicious = False):
+def main(dataset, algorithm, alpha = 15, malicious = False):
     
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -95,7 +95,7 @@ def main(dataset, algorithm, alpha = 15, k = 5, malicious = False):
         LR_GLOBAL = 1
         LR_LOCAL = 1e-3
         ALPHA = alpha
-        K = k
+        K = 10
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(DPRFClient(i, algorithm, dataset, device, model, EPOCH,
@@ -153,9 +153,6 @@ def main(dataset, algorithm, alpha = 15, k = 5, malicious = False):
 
 if __name__ == "__main__":
     accs = {}
-    
-    acc = main("mnist", "DPRF", k=20)
-    accs["20k"] = acc
     
     for alpha in [1, 3, 7]:
         acc = main("mnist", "DPRF", alpha=alpha)
