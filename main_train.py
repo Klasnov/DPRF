@@ -88,7 +88,7 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10, mali
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 600
+    ROUND_NUM = 200
     EPOCH = epoch
     BATCH_SIZE = 32
 
@@ -153,29 +153,22 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10, mali
 
 
 if __name__ == "__main__":
-    # max_acc = 0
-    # max_arg = {"epoch": 0, "lr_global": 0, "alpha": 0, "k": 0}
-    # for epoch in range(5, 30, 5):
-    #     for lr_global in np.arange(0.5, 2.0, 0.25):
-    #         for alpha in range(5, 40, 5):
-    #             for k in range(5, 30, 5):
-    #                 acc = main("mnist", "DPRF", epoch, lr_global, alpha, k)
-    #                 if acc > max_acc:
-    #                     max_acc = acc
-    #                     max_arg["epoch"] = 5 if epoch > 15 else epoch
-    #                     max_arg["lr_global"] = 1 if lr_global > 1.5 else lr_global
-    #                     max_arg["alpha"] = 15 if alpha > 25 else alpha
-    #                     max_arg["k"] = 10 if k > 20 else k
-    # for dataset in ["mnist", "cifar10", "emnist"]:
-    #     for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-    #         if algorithm == "DPRF":
-    #             if dataset == "mnist":
-    #                 main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"], True)
-    #             else:
-    #                 main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"], False)
-    #                 main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"], True)
-    #         else:
-    #             main(dataset, algorithm, epoch=max_arg["epoch"], malicious=False)
-    #             main(dataset, algorithm, epoch=max_arg["epoch"], malicious=True)
-    dataset, algorithm = console()
-    main(dataset, algorithm, malicious=True)
+    accs = {}
+    for epoch in [5, 10, 15, 20]:
+        for lr_global in [0.75, 1, 1.25, 1.5]:
+            for alpha in [5, 10, 15, 20]:
+                for k in [1, 5, 10, 15]:
+                    acc = main("mnist", "DPRF", epoch, lr_global, alpha, k)
+                    accs[f"{epoch}epoch_{lr_global}lr_{alpha}alpha_{k}k"] = acc
+    
+    with open("./accs.txt", "w") as file:
+        for key, value in accs.items():
+            file.write(f"{key}: {value}\n")
+    
+    # for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
+    #     for dataset in ["mnist", "cifar10", "emnist"]:
+    #         main(dataset, algorithm, malicious=False)
+    #         main(dataset, algorithm, malicious=True)
+        
+    # dataset, algorithm = console()
+    # main(dataset, algorithm, malicious=True)

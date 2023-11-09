@@ -99,7 +99,7 @@ class FedFomoServer(BaseServer):
     def global_train(self, malicious = False):
         if malicious:
             client = np.random.choice(self.clients)
-            client.set_malicious(malicious)
+            client.set_malicious()
         
         for i in range(self.round):
             for j, client in enumerate(self.clients):
