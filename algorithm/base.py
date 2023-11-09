@@ -266,7 +266,8 @@ class BaseServer(ABC):
         server_settings = f"{self.dataset}_{self.round}r_{self.lr_global_init}lg{server_addition}"
         client = self.clients[0]
         client_settings = f"{client.local_epoch}epc_{client.local_batch_size}bch_{client.lr_local_init}ll{client_addition}"
-        result_file = f"{result_dir}/{server_settings}_{client_settings}.csv"
+        malicious = "_malicious" if self.malicious else ""
+        result_file = f"{result_dir}/{server_settings}_{client_settings}{malicious}.csv"
         result_df.to_csv(result_file, index=False)
     
     def save_model(self, server_addition = "", client_addition = ""):

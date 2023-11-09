@@ -68,10 +68,12 @@ def console():
 
     return dataset, algorithm
 
-def main(dataset, algorithm, alpha = 15, malicious = False):
+def main(dataset, algorithm, malicious = False):
     
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    print("************   TRAIN STRAT   ************")
     start_time = time()
 
     # Model instantiation
@@ -87,14 +89,14 @@ def main(dataset, algorithm, alpha = 15, malicious = False):
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 250
+    ROUND_NUM = 500
     EPOCH = 10
     BATCH_SIZE = 32
 
     if algorithm == "DPRF":
         LR_GLOBAL = 1
         LR_LOCAL = 1e-3
-        ALPHA = alpha
+        ALPHA = 7
         K = 10
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
@@ -146,26 +148,15 @@ def main(dataset, algorithm, alpha = 15, malicious = False):
     
     end_time = time()
     print("\nThe totla training time is %.2f min." % ((end_time - start_time) / 60))
+    print("************   TRAIN STRAT   ************")
     print()
-
-    return max(server.global_accuracies)
 
 
 if __name__ == "__main__":
-    accs = {}
-    
-    for alpha in [1, 3, 7]:
-        acc = main("mnist", "DPRF", alpha=alpha)
-        accs[f"{alpha}a"] = acc
-    
-    with open("./data/accs_addtion.txt", "w") as file:
-        for key, value in accs.items():
-            file.write(f"{key}: {value}\n")
-    
-    # for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-    #     for dataset in ["mnist", "cifar10", "emnist"]:
-    #         main(dataset, algorithm, malicious=False)
-    #         main(dataset, algorithm, malicious=True)
-        
     # dataset, algorithm = console()
     # main(dataset, algorithm, malicious=True)
+
+    for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
+        if algorithm != "DPRF":
+            main("mnist", algorithm, malicious=False)
+        main("mnist", algorithm, malicious=True)
