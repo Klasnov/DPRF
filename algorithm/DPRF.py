@@ -66,7 +66,7 @@ class DPRFClient(BaseClient):
         else:
             multi_update = []
             for update in self.local_update:
-                multi_update.append(update * 3)
+                multi_update.append(update * 10)
             return multi_update
 
 class DPRFServer(BaseServer):

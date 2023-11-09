@@ -130,8 +130,8 @@ class BaseClient(ABC):
         client_state_dict = torch.load(client_model_path)
         self.personal_model.load_state_dict(client_state_dict)
     
-    def set_malicious(self, malicious):
-        self.malicious = malicious
+    def set_malicious(self):
+        self.malicious = True
 
 
 class BaseServer(ABC):
@@ -300,7 +300,7 @@ class BaseServer(ABC):
     def global_train(self, malicious = False):
         if malicious:
             client = np.random.choice(self.clients)
-            client.set_malicious(malicious)
+            client.set_malicious()
 
         for i in range(self.round):
             self.send_global_model()

@@ -69,7 +69,7 @@ def console():
 
     return dataset, algorithm
 
-def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
+def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10, malicious = False):
     
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -101,7 +101,7 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
         for i in range(CLIENT_NUM):
             server.add_client(DPRFClient(i, algorithm, dataset, device, model, EPOCH,
                                             BATCH_SIZE, LR_LOCAL, ALPHA, K))
-        server.global_train()
+        server.global_train(malicious)
         server.save_result(client_addition=f"_{ALPHA}a_{K}k")
     
     elif algorithm == "pFedMe":
@@ -113,7 +113,7 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
         server = pFedMeServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, BETA)
         for i in range(CLIENT_NUM):
             server.add_client(pFedMeClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LAMDA, K, LR_LOCAL))
-        server.global_train()
+        server.global_train(malicious)
         server.save_result(server_addition=f"_{BETA}b", client_addition=f"_{LAMDA}l_{K}k")
 
     elif algorithm == "FedMGDA+":
@@ -122,7 +122,7 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
         server = FedMGDAServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(FedMGDAClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LR_LOCAL))
-        server.global_train()
+        server.global_train(malicious)
         server.save_result()
     
     elif algorithm == "Ditto":
@@ -132,7 +132,7 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
         server = DittoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(DittoClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LAMDA, LR_LOCAL))
-        server.global_train()
+        server.global_train(malicious)
         server.save_result(server_addition=f"_{LAMDA}l")
     
     else:
@@ -142,7 +142,7 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
         server = FedFomoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, CLIENT_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(FedFomoClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LR_LOCAL, CLIENT_NUM))
-        server.global_train()
+        server.global_train(malicious)
         server.save_result(server_addition=f"_{SELECT_RATIO}r")
     
     # end_time = time()
@@ -153,27 +153,29 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
 
 
 if __name__ == "__main__":
-    max_acc = 0
-    max_arg = {"epoch": 0, "lr_global": 0, "alpha": 0, "k": 0}
-    for epoch in range(5, 30, 5):
-        for lr_global in np.arange(0.5, 2.0, 0.25):
-            for alpha in range(5, 40, 5):
-                for k in range(5, 30, 5):
-                    acc = main("mnist", "DPRF", epoch, lr_global, alpha, k)
-                    if acc > max_acc:
-                        max_acc = acc
-                        max_arg["epoch"] = 5 if epoch > 15 else epoch
-                        max_arg["lr_global"] = 1 if lr_global > 1.5 else lr_global
-                        max_arg["alpha"] = 15 if alpha > 25 else alpha
-                        max_arg["k"] = 10 if k > 20 else k
-    for dataset in ["mnist", "cifar10", "emnist"]:
-        for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-            if algorithm == "DPRF":
-                if dataset == "mnist":
-                    continue
-                else:
-                    main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"])
-            else:
-                main(dataset, algorithm, epoch=max_arg["epoch"])
-    # dataset, algorithm = console()
-    # main(dataset, algorithm)
+    # max_acc = 0
+    # max_arg = {"epoch": 0, "lr_global": 0, "alpha": 0, "k": 0}
+    # for epoch in range(5, 30, 5):
+    #     for lr_global in np.arange(0.5, 2.0, 0.25):
+    #         for alpha in range(5, 40, 5):
+    #             for k in range(5, 30, 5):
+    #                 acc = main("mnist", "DPRF", epoch, lr_global, alpha, k)
+    #                 if acc > max_acc:
+    #                     max_acc = acc
+    #                     max_arg["epoch"] = 5 if epoch > 15 else epoch
+    #                     max_arg["lr_global"] = 1 if lr_global > 1.5 else lr_global
+    #                     max_arg["alpha"] = 15 if alpha > 25 else alpha
+    #                     max_arg["k"] = 10 if k > 20 else k
+    # for dataset in ["mnist", "cifar10", "emnist"]:
+    #     for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
+    #         if algorithm == "DPRF":
+    #             if dataset == "mnist":
+    #                 main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"], True)
+    #             else:
+    #                 main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"], False)
+    #                 main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"], True)
+    #         else:
+    #             main(dataset, algorithm, epoch=max_arg["epoch"], malicious=False)
+    #             main(dataset, algorithm, epoch=max_arg["epoch"], malicious=True)
+    dataset, algorithm = console()
+    main(dataset, algorithm, malicious=True)

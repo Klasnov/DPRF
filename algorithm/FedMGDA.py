@@ -38,7 +38,7 @@ class FedMGDAClient(BaseClient):
         else:
             multi_update = []
             for update in self.updates:
-                multi_update.append(update * 3)
+                multi_update.append(update * 10)
             return multi_update
     
 class FedMGDAServer(BaseServer):

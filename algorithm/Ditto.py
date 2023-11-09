@@ -53,7 +53,10 @@ class DittoClient(BaseClient):
         if not self.malicious:
             return self.local_model
         else:
-            return self.personal_model
+            malicious_model = deepcopy(self.personal_model)
+            for param_local, param_per, param_malicious in zip(self.local_model.parameters(), self.personal_model.parameters(), malicious_model):
+                param_malicious.data -= self.lamda * (param_local - param_per) * 10
+            return malicious_model
 
 
 class DittoServer(BaseServer):

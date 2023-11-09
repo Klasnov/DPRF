@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+import numpy as np
 import torch.nn.functional as F
 from .base import BaseClient, BaseServer
 
@@ -75,7 +75,7 @@ class FedFomoClient(BaseClient):
         if not self.malicious:
             return len(self.train_full_dataloader)
         else:
-            return len(self.train_full_dataloader) * 3
+            return len(self.train_full_dataloader) * 10
     
 
 class FedFomoServer(BaseServer):
@@ -96,7 +96,11 @@ class FedFomoServer(BaseServer):
             for param_global, param_client in zip(self.global_model.parameters(), self.models[i].parameters()):
                 param_global.data += param_client * client.get_train_num() / total_train_num
 
-    def global_train(self):
+    def global_train(self, malicious = False):
+        if malicious:
+            client = np.random.choice(self.clients)
+            client.set_malicious(malicious)
+        
         for i in range(self.round):
             for j, client in enumerate(self.clients):
                 _, indexs = torch.topk(self.p[j], self.down_load_num)
