@@ -156,6 +156,7 @@ class BaseServer(ABC):
         self.test_dataloader = DataLoader(TensorDataset(self.test_data, self.test_labels),
                                           batch_size=len(self.test_data), shuffle=False)
         self.decay_factor = 0
+        self.malicious = False
 
     def add_client(self, client):
         self.clients.append(client)
@@ -289,7 +290,8 @@ class BaseServer(ABC):
     
     def print_inform(self, round):
         print("####### Round %d (%.3f%%) ########" % ((round + 1), (round + 1) * 100 / self.round))
-        print(f"algorithm: {self.algorithm}, dataset: {self.dataset}")
+        print(f" algorithm {self.algorithm}, dataset {self.dataset}")
+        print(f" malicious {self.malicious}")
         print("  - trai_acc = %.4f%%" % (self.train_accuracies[round] * 100))
         print("  - locl_acc = %.4f%%" % (self.local_accuracies[round] * 100))
         if self.algorithm != "FedMGDA+":
@@ -299,6 +301,7 @@ class BaseServer(ABC):
     
     def global_train(self, malicious = False):
         if malicious:
+            self.malicious = True
             client = np.random.choice(self.clients)
             client.set_malicious()
 

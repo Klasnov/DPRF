@@ -1,6 +1,5 @@
 import torch
-import numpy as np
-# from time import time
+from time import time
 from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
@@ -69,11 +68,11 @@ def console():
 
     return dataset, algorithm
 
-def main(dataset, algorithm, lr_global = 1, alpha = 15, k = 5, malicious = False):
+def main(dataset, algorithm, alpha = 15, k = 5, malicious = False):
     
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # start_time = time()
+    start_time = time()
 
     # Model instantiation
     if dataset == "mnist":
@@ -93,7 +92,7 @@ def main(dataset, algorithm, lr_global = 1, alpha = 15, k = 5, malicious = False
     BATCH_SIZE = 32
 
     if algorithm == "DPRF":
-        LR_GLOBAL = lr_global
+        LR_GLOBAL = 1
         LR_LOCAL = 1e-3
         ALPHA = alpha
         K = k
@@ -145,9 +144,9 @@ def main(dataset, algorithm, lr_global = 1, alpha = 15, k = 5, malicious = False
         server.global_train(malicious)
         server.save_result(server_addition=f"_{SELECT_RATIO}r")
     
-    # end_time = time()
-    # print(f"\nThe totla training time is {end_time - start_time}s.")
-    # print()
+    end_time = time()
+    print("\nThe totla training time is %.2f min." % ((end_time - start_time) / 60))
+    print()
 
     return max(server.global_accuracies)
 
@@ -155,19 +154,14 @@ def main(dataset, algorithm, lr_global = 1, alpha = 15, k = 5, malicious = False
 if __name__ == "__main__":
     accs = {}
     
-    for k in [1, 3, 5, 10, 15]:
-        acc = main("mnist", "DPRF", k=k)
-        accs[f"{k}k"] = acc
+    acc = main("mnist", "DPRF", k=20)
+    accs["20k"] = acc
     
-    for lr_global in [0.5, 0.75, 1, 1.25, 1.5]:
-        acc = main("mnist", "DPRF", lr_global=lr_global)
-        accs[f"{lr_global}lr"] = acc
-    
-    for alpha in [5, 10, 15, 20, 25]:
+    for alpha in [1, 3, 7]:
         acc = main("mnist", "DPRF", alpha=alpha)
         accs[f"{alpha}a"] = acc
     
-    with open("./accs.txt", "w") as file:
+    with open("./data/accs_addtion.txt", "w") as file:
         for key, value in accs.items():
             file.write(f"{key}: {value}\n")
     
