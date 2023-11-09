@@ -69,7 +69,7 @@ def console():
 
     return dataset, algorithm
 
-def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10, malicious = False):
+def main(dataset, algorithm, lr_global = 1, alpha = 15, k = 5, malicious = False):
     
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -88,8 +88,8 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10, mali
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 200
-    EPOCH = epoch
+    ROUND_NUM = 250
+    EPOCH = 10
     BATCH_SIZE = 32
 
     if algorithm == "DPRF":
@@ -154,12 +154,18 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10, mali
 
 if __name__ == "__main__":
     accs = {}
-    for epoch in [5, 10, 15, 20]:
-        for lr_global in [0.75, 1, 1.25, 1.5]:
-            for alpha in [5, 10, 15, 20]:
-                for k in [1, 5, 10, 15]:
-                    acc = main("mnist", "DPRF", epoch, lr_global, alpha, k)
-                    accs[f"{epoch}epoch_{lr_global}lr_{alpha}alpha_{k}k"] = acc
+    
+    for k in [1, 3, 5, 10, 15]:
+        acc = main("mnist", "DPRF", k=k)
+        accs[f"{k}k"] = acc
+    
+    for lr_global in [0.5, 0.75, 1, 1.25, 1.5]:
+        acc = main("mnist", "DPRF", lr_global=lr_global)
+        accs[f"{lr_global}lr"] = acc
+    
+    for alpha in [5, 10, 15, 20, 25]:
+        acc = main("mnist", "DPRF", alpha=alpha)
+        accs[f"{alpha}a"] = acc
     
     with open("./accs.txt", "w") as file:
         for key, value in accs.items():
