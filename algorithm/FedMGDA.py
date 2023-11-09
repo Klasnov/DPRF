@@ -20,8 +20,6 @@ class FedMGDAClient(BaseClient):
         
         self.local_model.train()
         optim = torch.optim.SGD(self.local_model.parameters(), self.lr_local)
-        inputs
-        labels
         for inputs, labels in self.train_dataloader:
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
@@ -49,7 +47,7 @@ class FedMGDAServer(BaseServer):
         super().__init__(algorithm, dataset, device, model, lr_global, selection_ratio, round)
         self.clients = []
     
-    def calculate_weights(self) -> tuple[list[list[torch.Tensor]], torch.Tensor]:
+    def calculate_weights(self):
         clients_selected = self.select_clients()
         updates = []
         for client in clients_selected:
@@ -69,14 +67,14 @@ class FedMGDAServer(BaseServer):
                 zero_update = torch.zeros_like(update_flatten)
                 norm_updates.append(zero_update.numpy())
             else:
-                norm_updates.append((update_flatten / norm).detach().numpy())
+                norm_updates.append((update_flatten / norm).detach().cpu().numpy())
         norm_updates = np.asarray(norm_updates)
         
-        weights = cp.Variable(len(clients_selected))
-        objective = cp.Minimize(cp.norm(norm_updates.T @ weights, "fro") ** 2)
+        weights = cp.Variable(len(clients_selected), nonneg=True)
+        objective = cp.Minimize(cp.sum_squares(norm_updates.T @ weights))
         constraints = [weights >= 0, cp.sum(weights) == 1]
         problem = cp.Problem(objective, constraints)
-        problem.solve(solver=cp.ECOS)
+        problem.solve(solver=cp.ECOS, verbose=False)
 
         restored_updates = []
         client_idx = 0
@@ -99,6 +97,7 @@ class FedMGDAServer(BaseServer):
         global_updates = [torch.zeros_like(global_param) for global_param in self.global_model.parameters()]
         for client_updates, weight in zip(clients_updates, weights):
             for global_update, client_update in zip(global_updates, client_updates):
+                client_update = client_update.to(self.device)
                 global_update += client_update * weight
         
         for global_param, global_update in zip(self.global_model.parameters(), global_updates):

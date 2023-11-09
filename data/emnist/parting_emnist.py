@@ -22,7 +22,7 @@ y_test = emnist_testset.targets.numpy()
 label_to_indices = {label: np.where(y_train == label)[0] for label in range(47)}
 
 # Generate random allocation vector for each label
-n_clients = 50
+n_clients = 30
 np.random.seed(6)
 p = np.random.dirichlet(np.repeat(1e2, n_clients))
 allocation_vectors = {label: np.random.choice(n_clients, size=len(indices), p=p) for label, indices in label_to_indices.items()}

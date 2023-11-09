@@ -94,14 +94,14 @@ class DPRFServer(BaseServer):
                 zero_update = torch.zeros_like(update_flatten)
                 norm_updates.append(zero_update.numpy())
             else:
-                norm_updates.append((update_flatten / norm).detach().numpy())
+                norm_updates.append((update_flatten / norm).detach().cpu().numpy())
         norm_updates = np.asarray(norm_updates)
         
-        weights = cp.Variable(len(clients_selected))
-        objective = cp.Minimize(cp.norm(norm_updates.T @ weights, "fro") ** 2)
+        weights = cp.Variable(len(clients_selected), nonneg=True)
+        objective = cp.Minimize(cp.sum_squares(norm_updates.T @ weights))
         constraints = [weights >= 0, cp.sum(weights) == 1]
         problem = cp.Problem(objective, constraints)
-        problem.solve(solver=cp.ECOS)
+        problem.solve(solver=cp.ECOS, verbose=False)
 
         restored_updates = []
         client_idx = 0
@@ -124,6 +124,7 @@ class DPRFServer(BaseServer):
         global_updates = [torch.zeros_like(global_param) for global_param in self.global_model.parameters()]
         for client_updates, weight in zip(clients_updates, weights):
             for global_update, client_update in zip(global_updates, client_updates):
+                client_update = client_update.to(self.device)
                 global_update += client_update * weight
         
         for global_param, global_update in zip(self.global_model.parameters(), global_updates):

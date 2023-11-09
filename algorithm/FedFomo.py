@@ -16,10 +16,14 @@ class FedFomoClient(BaseClient):
         for model in self.models:
             model.eval()
             for inputs, labels in self.test_full_dataloader:
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
                 outputs = model(inputs)
                 loss = F.cross_entropy(outputs, labels)
                 self.losses.append(loss)
         for inputs, labels in self.test_full_dataloader:
+            inputs = inputs.to(self.device)
+            labels = labels.to(self.device)
             outputs = self.local_model(inputs)
             self.loss = F.cross_entropy(outputs, labels)
 
@@ -109,5 +113,5 @@ class FedFomoServer(BaseServer):
             self.model_global_evaluate()
             if (i + 1) % 100 == 0:
                 self.lr_decay()
-            self.print_inform()
+            self.print_inform(i)
             

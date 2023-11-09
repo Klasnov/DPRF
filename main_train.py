@@ -84,7 +84,7 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
         CLIENT_NUM = 20
     else:
         model = Emnist_Model()
-        CLIENT_NUM = 50
+        CLIENT_NUM = 30
 
     # Hyperparameters
     SELECT_RATIO = 0.3
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     max_acc = 0
     max_arg = {"epoch": 0, "lr_global": 0, "alpha": 0, "k": 0}
     for epoch in range(5, 30, 5):
-        for lr_global in np.arange(0.25, 2.25, 0.25):
+        for lr_global in np.arange(0.5, 2.0, 0.25):
             for alpha in range(5, 40, 5):
                 for k in range(5, 30, 5):
                     acc = main("mnist", "DPRF", epoch, lr_global, alpha, k)
@@ -176,3 +176,5 @@ if __name__ == "__main__":
                     main(dataset, algorithm, max_arg["epoch"], max_arg["lr_global"], max_arg["alpha"], max_arg["k"])
             else:
                 main(dataset, algorithm, epoch=max_arg["epoch"])
+    # dataset, algorithm = console()
+    # main(dataset, algorithm)
