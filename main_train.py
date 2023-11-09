@@ -1,5 +1,6 @@
 import torch
-from time import time
+import numpy as np
+# from time import time
 from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
@@ -92,7 +93,7 @@ def main(dataset: str,
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 600
+    ROUND_NUM = 1
     EPOCH = epoch
     BATCH_SIZE = 32
 
@@ -161,7 +162,7 @@ if __name__ == "__main__":
     max_acc = 0
     max_arg = {"epoch": 0, "lr_global": 0, "alpha": 0, "k": 0}
     for epoch in range(5, 30, 5):
-        for lr_global in range(0.25, 2.25, 0.25):
+        for lr_global in np.arange(0.25, 2.25, 0.25):
             for alpha in range(5, 40, 5):
                 for k in range(5, 30, 5):
                     acc = main("mnist", "DPRF", epoch, lr_global, alpha, k)
