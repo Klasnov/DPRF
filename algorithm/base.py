@@ -9,16 +9,15 @@ from abc import ABC, abstractclassmethod
 from torch.utils.data import DataLoader, TensorDataset
 
 class BaseClient(ABC):
-    def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module,
-                 local_epoch: int, local_batch_size: int, lr_local: float):
-        self.client_id: int = client_id
-        self.algorithm: str = algorithm
-        self.dataset: str = dataset
-        self.device: str = device
-        self.local_epoch: int = local_epoch
-        self.local_batch_size: int = local_batch_size
-        self.lr_local_init: float = lr_local
-        self.lr_local: float = lr_local
+    def __init__(self, client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local):
+        self.client_id = client_id
+        self.algorithm = algorithm
+        self.dataset = dataset
+        self.device = device
+        self.local_epoch = local_epoch
+        self.local_batch_size = local_batch_size
+        self.lr_local_init = lr_local
+        self.lr_local = lr_local
         self.local_model = deepcopy(model).to(self.device)
         self.personal_model = deepcopy(model).to(self.device)
 
@@ -36,11 +35,9 @@ class BaseClient(ABC):
         self.train_full_dataloader = DataLoader(train_dataset, batch_size=len(train_dataset), shuffle=False)
         self.test_full_dataloader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False)
 
-        self.malicious: bool = False
+        self.malicious = False
 
-    def get_train_batch(self) -> tuple[torch.Tensor, torch.Tensor]:
-        inputs: torch.Tensor
-        labels: torch.Tensor
+    def get_train_batch(self):
         try:
             inputs, labels = next(self.iter_train)
         except:
@@ -48,24 +45,22 @@ class BaseClient(ABC):
             inputs, labels = next(self.iter_train)
         return inputs.to(self.device), labels.to(self.device)
     
-    def set_model(self, new_model_state_dict: dict) -> None:
+    def set_model(self, new_model_state_dict):
         self.local_model.load_state_dict(new_model_state_dict)
     
     @abstractclassmethod
-    def local_train(self) -> None:
+    def local_train(self):
         pass
 
-    def lr_decay(self, decay_factor: int) -> None:
+    def lr_decay(self, decay_factor):
         self.lr_local = self.lr_local_init / decay_factor
 
-    def train_inform(self) -> tuple[float, float, int]:
+    def train_inform(self):
         correct_counts = 0
         losses = []
         total_samples = len(self.train_data)
         self.local_model.eval()
         with torch.no_grad():
-            inputs: torch.Tensor
-            labels: torch.Tensor
             for inputs, labels in self.train_full_dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.local_model(inputs)
@@ -75,14 +70,12 @@ class BaseClient(ABC):
                 correct_counts += torch.sum(predictions == labels).item()
         return (correct_counts / total_samples), np.mean(losses), total_samples
 
-    def test_inform(self) -> tuple[float, float, int]:
+    def test_inform(self):
         correct_counts = 0
         losses = []
         total_samples = len(self.test_data)
         self.local_model.eval()
         with torch.no_grad():
-            inputs: torch.Tensor
-            labels: torch.Tensor
             for inputs, labels in self.test_full_dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.local_model(inputs)
@@ -92,14 +85,12 @@ class BaseClient(ABC):
                 correct_counts += torch.sum(predictions == labels).item()
         return (correct_counts / total_samples), np.mean(losses), total_samples
 
-    def test_per_inform(self) -> tuple[float, float, int]:
+    def test_per_inform(self):
         correct_counts = 0
         losses = []
         total_samples = len(self.test_data)
         self.personal_model.eval()
         with torch.no_grad():
-            inputs: torch.Tensor
-            labels: torch.Tensor
             for inputs, labels in self.test_full_dataloader:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.personal_model(inputs)
@@ -109,7 +100,7 @@ class BaseClient(ABC):
                 correct_counts += torch.sum(predictions == labels).item()
         return (correct_counts / total_samples), np.mean(losses), total_samples
     
-    def save_local_model(self, client_addition: str = "") -> None:
+    def save_local_model(self, client_addition = ""):
         client_model_dir = f"./model/{self.algorithm}/clients"
         if not os.path.exists(client_model_dir):
             os.makedirs(client_model_dir)
@@ -117,7 +108,7 @@ class BaseClient(ABC):
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local_init}ll{client_addition}_local.pt"
         torch.save(self.local_model.state_dict(), client_model_path)
     
-    def save_personal_model(self, client_addition: str = "") -> None:
+    def save_personal_model(self, client_addition = ""):
         client_model_dir = f"./model/{self.algorithm}/clients"
         if not os.path.exists(client_model_dir):
             os.makedirs(client_model_dir)
@@ -125,36 +116,35 @@ class BaseClient(ABC):
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local_init}ll{client_addition}_personal.pt"
         torch.save(self.personal_model.state_dict(), client_model_path)
     
-    def load_local_model(self, client_addition: str = "") -> None:
+    def load_local_model(self, client_addition = ""):
         client_model_dir = f"./model/{self.algorithm}/clients"
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local_init}ll{client_addition}_local.pt"
         client_state_dict = torch.load(client_model_path)
         self.local_model.load_state_dict(client_state_dict)
     
-    def load_personal_model(self, client_addition: str = "") ->None:
+    def load_personal_model(self, client_addition = "") ->None:
         client_model_dir = f"./model/{self.algorithm}/clients"
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local_init}ll{client_addition}_personal.pt"
         client_state_dict = torch.load(client_model_path)
         self.personal_model.load_state_dict(client_state_dict)
     
-    def set_malicious(self, malicious: bool) -> None:
+    def set_malicious(self, malicious):
         self.malicious = malicious
 
 
 class BaseServer(ABC):
-    def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_global: float,
-                 selection_ratio: float, round: int):
-        self.algorithm: str = algorithm
-        self.dataset: str = dataset
-        self.device: str = device
+    def __init__(self, algorithm, dataset, device, model, lr_global, selection_ratio, round):
+        self.algorithm = algorithm
+        self.dataset = dataset
+        self.device = device
         self.global_model = model.to(self.device)
-        self.lr_global_init: float = lr_global
-        self.lr_global: float = lr_global
-        self.clients: list[BaseClient] = []
-        self.selection_ratio: float = selection_ratio
-        self.round: int = round
+        self.lr_global_init = lr_global
+        self.lr_global = lr_global
+        self.clients = []
+        self.selection_ratio = selection_ratio
+        self.round = round
         self.train_accuracies = []
         self.train_losses = []
         self.local_accuracies = []
@@ -167,14 +157,14 @@ class BaseServer(ABC):
                                           batch_size=len(self.test_data), shuffle=False)
         self.decay_factor = 0
 
-    def add_client(self, client: BaseClient) -> None:
+    def add_client(self, client):
         self.clients.append(client)
 
-    def send_global_model(self) -> None:
+    def send_global_model(self):
         for client in self.clients:
             client.set_model(self.global_model.state_dict())
 
-    def select_clients(self) -> list[BaseClient]:
+    def select_clients(self):
         num_selected_users = int(len(self.clients) * self.selection_ratio)
         if num_selected_users == 0:
             return self.clients
@@ -182,16 +172,16 @@ class BaseServer(ABC):
         return list(selected_users)
 
     @abstractclassmethod
-    def update_global_model(self) -> None:
+    def update_global_model(self):
         pass
 
-    def lr_decay(self) -> None:
+    def lr_decay(self):
         self.decay_factor += 10
         self.lr_global = self.lr_global_init / self.decay_factor
         for client in self.clients:
             client.lr_decay(self.decay_factor)
 
-    def model_evaluate(self) -> None:
+    def model_evaluate(self):
         train_acc = []
         train_loss = []
         train_sample_num = []
@@ -226,7 +216,7 @@ class BaseServer(ABC):
         if self.algorithm == "FedMGDA+":
             self.test_std_devs.append(np.std(test_loss))
 
-    def model_per_evaluate(self) -> None:
+    def model_per_evaluate(self):
         test_per_acc = []
         test_per_loss = []
         test_sample_num = []
@@ -245,7 +235,7 @@ class BaseServer(ABC):
         self.personal_accuracies.append(np.sum(test_per_acc * test_sample_num / test_total_num))
         self.test_std_devs.append(np.std(test_per_loss))
 
-    def model_global_evaluate(self) -> None:
+    def model_global_evaluate(self):
         correct_counts = 0
         self.global_model.eval()
         with torch.no_grad():
@@ -258,7 +248,7 @@ class BaseServer(ABC):
         global_acc = correct_counts / len(self.test_data)
         self.global_accuracies.append(global_acc)
 
-    def save_result(self, server_addition: str = "", client_addition: str = "") -> None:
+    def save_result(self, server_addition = "", client_addition = ""):
         result_data = {
             "Train Accuracy": self.train_accuracies,
             "Train Loss": self.train_losses,
@@ -278,7 +268,7 @@ class BaseServer(ABC):
         result_file = f"{result_dir}/{server_settings}_{client_settings}.csv"
         result_df.to_csv(result_file, index=False)
     
-    def save_model(self, server_addition: str = "", client_addition: str = "") -> None:
+    def save_model(self, server_addition = "", client_addition = ""):
         server_model_dir = f"./model/{self.algorithm}"
         if not os.path.exists(server_model_dir):
             os.makedirs(server_model_dir)
@@ -288,7 +278,7 @@ class BaseServer(ABC):
             client.save_local_model(client_addition)
             client.save_personal_model(client_addition)
     
-    def load_model(self, server_addition: str = "", client_addition: str = "") -> None:
+    def load_model(self, server_addition = "", client_addition = ""):
         server_model_dir = f"./model/{self.algorithm}"
         server_model_path = f"{server_model_dir}/{self.dataset}_{self.round}r_{self.lr_global_init}lg{server_addition}.pt"
         server_state_dict = torch.load(server_model_path)
@@ -297,8 +287,9 @@ class BaseServer(ABC):
             client.load_local_model(client_addition)
             client.load_personal_model(client_addition)
     
-    def print_inform(self, round: int) -> None:
+    def print_inform(self, round):
         print("####### Round %d (%.3f%%) ########" % ((round + 1), (round + 1) * 100 / self.round))
+        print(f"algorithm: {self.algorithm}, dataset: {self.dataset}")
         print("  - trai_acc = %.4f%%" % (self.train_accuracies[round] * 100))
         print("  - locl_acc = %.4f%%" % (self.local_accuracies[round] * 100))
         if self.algorithm != "FedMGDA+":
@@ -306,9 +297,9 @@ class BaseServer(ABC):
         print("  - glob_acc = %.4f%%" % (self.global_accuracies[round] * 100))
         print()
     
-    def global_train(self, malicious: bool = False) -> None:
+    def global_train(self, malicious = False):
         if malicious:
-            client: BaseClient = np.random.choice(self.clients)
+            client = np.random.choice(self.clients)
             client.set_malicious(malicious)
 
         for i in range(self.round):
@@ -326,4 +317,4 @@ class BaseServer(ABC):
             if (i + 1) % 150 == 0:
                 self.lr_decay()
             
-            # self.print_inform(i)
+            self.print_inform(i)

@@ -9,7 +9,7 @@ from algorithm.FedFomo import FedFomoClient, FedFomoServer
 from utils.util_models import Minst_Model, Cifar10_Model, Emnist_Model
 
 
-def console() -> tuple[str, str]:
+def console():
     print("Welcome to Personalized Federated Learning Program!")
     print("Please follow the prompts to select the dataset and algorithm for training.")
     print()
@@ -69,12 +69,7 @@ def console() -> tuple[str, str]:
 
     return dataset, algorithm
 
-def main(dataset: str,
-         algorithm: str,
-         epoch: int = 10,
-         lr_global: float = 1,
-         alpha: int = 10, 
-         k: int = 10) -> float:
+def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
     
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -93,7 +88,7 @@ def main(dataset: str,
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 1
+    ROUND_NUM = 600
     EPOCH = epoch
     BATCH_SIZE = 32
 

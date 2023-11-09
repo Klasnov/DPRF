@@ -4,14 +4,14 @@ import torch.nn.functional as F
 from .base import BaseClient, BaseServer
 
 class FedFomoClient(BaseClient):
-    def __init__(self, client_id: int, algorithm: str, dataset: str, device: str, model: nn.Module, local_epoch: int, local_batch_size: int, lr_local: float, client_num: int):
+    def __init__(self, client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local, client_num):
         super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
-        self.models: list[nn.Module] = [self.personal_model for _ in range(client_num)]
-        self.losses: list[torch.Tensor] = []
-        self.loss: torch.Tensor = 0
-        self.weights: list[float] = [1 for _ in range(client_num)]
+        self.models = [self.personal_model for _ in range(client_num)]
+        self.losses = []
+        self.loss = 0
+        self.weights = [1 for _ in range(client_num)]
     
-    def calculate_losses(self) -> None:
+    def calculate_losses(self):
         self.losses.clear()
         for model in self.models:
             model.eval()
@@ -23,7 +23,7 @@ class FedFomoClient(BaseClient):
             outputs = self.local_model(inputs)
             self.loss = F.cross_entropy(outputs, labels)
 
-    def calculate_weights(self) -> None:
+    def calculate_weights(self):
         sum = 0
         for i, model in enumerate(self.models):
             param_list = []
@@ -40,17 +40,17 @@ class FedFomoClient(BaseClient):
             for i in range(len(self.weights)):
                 self.weights[i] /= sum
 
-    def update_personal_model(self) -> None:
+    def update_personal_model(self):
         self.calculate_losses()
         self.calculate_weights()
-        suffix_terms: list[torch.Tensor] = [torch.zeros_like(param) for param in self.personal_model.parameters()]
+        suffix_terms = [torch.zeros_like(param) for param in self.personal_model.parameters()]
         for i, model in enumerate(self.models):
             for param_suffix, param_other, param_local in zip(suffix_terms, model.parameters(), self.local_model.parameters()):
                 param_suffix += self.weights[i] * (param_other.data - param_local.data)
         for param_person, param_local, param_suffix in zip(self.personal_model.parameters(), self.local_model.parameters(), suffix_terms):
             param_person.data = param_local.data + param_suffix
     
-    def local_train(self, models: list[nn.Module], indexes: list[int]) -> tuple[nn.Module, torch.Tensor]:
+    def local_train(self, models, indexes):
         for model, index in zip(models, indexes):
             self.models[index] = model
         self.update_personal_model()
@@ -67,7 +67,7 @@ class FedFomoClient(BaseClient):
             param_local.data = param_personal.data
         return self.personal_model, torch.tensor(self.weights)
     
-    def get_train_num(self) -> int:
+    def get_train_num(self):
         if not self.malicious:
             return len(self.train_full_dataloader)
         else:
@@ -75,14 +75,14 @@ class FedFomoClient(BaseClient):
     
 
 class FedFomoServer(BaseServer):
-    def __init__(self, algorithm: str, dataset: str, device: str, model: nn.Module, lr_global: float, selection_ratio: float, round: int, client_num: int):
+    def __init__(self, algorithm, dataset, device, model, lr_global, selection_ratio, round, client_num):
         super().__init__(algorithm, dataset, device, model, lr_global, selection_ratio, round)
-        self.clients: list[FedFomoClient] = []
-        self.models: list[nn.Module] = [self.global_model for _ in range(client_num)]
-        self.p: list[torch.Tensor] = [torch.ones(client_num) for _ in range(client_num)]
+        self.clients = []
+        self.models = [self.global_model for _ in range(client_num)]
+        self.p = [torch.ones(client_num) for _ in range(client_num)]
         self.down_load_num = int(client_num * self.selection_ratio)
     
-    def update_global_model(self) -> None:
+    def update_global_model(self):
         total_train_num = 0
         for client in self.clients:
             total_train_num += client.get_train_num()
@@ -92,7 +92,7 @@ class FedFomoServer(BaseServer):
             for param_global, param_client in zip(self.global_model.parameters(), self.models[i].parameters()):
                 param_global.data += param_client * client.get_train_num() / total_train_num
 
-    def global_train(self) -> None:
+    def global_train(self):
         for i in range(self.round):
             for j, client in enumerate(self.clients):
                 _, indexs = torch.topk(self.p[j], self.down_load_num)

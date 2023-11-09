@@ -10,7 +10,7 @@ class Minst_Model(nn.Module):
         self.fc2 = nn.Linear(512, 128)
         self.fc3 = nn.Linear(128, 10)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -25,7 +25,7 @@ class Cifar10_Model(nn.Module):
         self.fc1 = nn.Linear(64 * 8 * 8, 128)
         self.fc2 = nn.Linear(128, 10)
     
-    def forward(self, x: torch.Tensor):
+    def forward(self, x):
         x = F.relu(self.conv1(x))
         x = self.pool(F.relu(self.conv2(x)))
         x = x.view(-1, 64 * 8 * 8)
@@ -41,7 +41,7 @@ class Emnist_Model(nn.Module):
         self.fc1 = nn.Linear(64 * 7 * 7, 128)
         self.fc2 = nn.Linear(128, 47)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x):
         x = torch.unsqueeze(x, 1)
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = F.relu(F.max_pool2d(self.conv2(x), 2))
