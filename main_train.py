@@ -112,8 +112,7 @@ def main(dataset, algorithm, epoch = 10, lr_global = 1, alpha = 10, k = 10):
         BETA = 2
         server = pFedMeServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, BETA)
         for i in range(CLIENT_NUM):
-            server.add_client(pFedMeClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE,
-                                            LAMDA, K, LR_LOCAL))
+            server.add_client(pFedMeClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LAMDA, K, LR_LOCAL))
         server.global_train()
         server.save_result(server_addition=f"_{BETA}b", client_addition=f"_{LAMDA}l_{K}k")
 
