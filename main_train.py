@@ -89,7 +89,7 @@ def main(dataset, algorithm, malicious = False):
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 500
+    ROUND_NUM = 750
     EPOCH = 10
     BATCH_SIZE = 32
 
@@ -137,7 +137,7 @@ def main(dataset, algorithm, malicious = False):
         server.save_result(server_addition=f"_{LAMDA}l")
     
     else:
-        SELECT_RATIO = 0.5
+        SELECT_RATIO = 0.2
         LR_GLOBAL = 0
         LR_LOCAL = 1e-3
         server = FedFomoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, CLIENT_NUM)
@@ -154,9 +154,10 @@ def main(dataset, algorithm, malicious = False):
 
 if __name__ == "__main__":
     # dataset, algorithm = console()
-    # main(dataset, algorithm, malicious=True)
+    # main(dataset, algorithm, malicious=False)
 
     for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-        if algorithm != "DPRF":
-            main("mnist", algorithm, malicious=False)
-        main("mnist", algorithm, malicious=True)
+        if algorithm == "FedFomo":
+            break
+        main("cifar10", algorithm, malicious=False)
+        main("cifar10", algorithm, malicious=True)
