@@ -59,7 +59,7 @@ class pFedMeClient(BaseClient):
             return self.local_model
         else:
             malicious_model = deepcopy(self.personal_model)
-            for param_local, param_per, param_malicious in zip(self.local_model.parameters(), self.personal_model.parameters(), malicious_model):
+            for param_local, param_per, param_malicious in zip(self.local_model.parameters(), self.personal_model.parameters(), malicious_model.parameters()):
                 param_malicious.data -= self.lamda * (param_local - param_per) * 10
             return malicious_model
 

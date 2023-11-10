@@ -156,8 +156,7 @@ if __name__ == "__main__":
     # dataset, algorithm = console()
     # main(dataset, algorithm, malicious=False)
 
-    for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-        if algorithm == "FedFomo":
-            break
-        main("cifar10", algorithm, malicious=False)
-        main("cifar10", algorithm, malicious=True)
+    for algorithm in ["pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
+        main("mnist", algorithm, malicious=True)
+        if algorithm != "pFedMe":
+            main("mnist", algorithm, malicious=False)
