@@ -6,14 +6,13 @@ from .base import BaseClient, BaseServer
 class FedFomoClient(BaseClient):
     def __init__(self, client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local, client_num):
         super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
-        self.models = [self.personal_model for _ in range(client_num)]
         self.losses = []
         self.loss = 0
         self.weights = [1 for _ in range(client_num)]
     
-    def calculate_losses(self):
+    def calculate_losses(self, models):
         self.losses.clear()
-        for model in self.models:
+        for model in models:
             model.eval()
             for inputs, labels in self.test_full_dataloader:
                 inputs = inputs.to(self.device)
@@ -27,9 +26,9 @@ class FedFomoClient(BaseClient):
             outputs = self.local_model(inputs)
             self.loss = F.cross_entropy(outputs, labels)
 
-    def calculate_weights(self):
+    def calculate_weights(self, models):
         sum = 0
-        for i, model in enumerate(self.models):
+        for i, model in enumerate(models):
             param_list = []
             for param_model, param_local in zip(model.parameters(), self.local_model.parameters()):
                 param_list.append((param_model - param_local).flatten())
@@ -44,20 +43,18 @@ class FedFomoClient(BaseClient):
             for i in range(len(self.weights)):
                 self.weights[i] /= sum
 
-    def update_personal_model(self):
-        self.calculate_losses()
-        self.calculate_weights()
+    def update_personal_model(self, models):
+        self.calculate_losses(models)
+        self.calculate_weights(models)
         suffix_terms = [torch.zeros_like(param) for param in self.personal_model.parameters()]
-        for i, model in enumerate(self.models):
+        for i, model in enumerate(models):
             for param_suffix, param_other, param_local in zip(suffix_terms, model.parameters(), self.local_model.parameters()):
                 param_suffix += self.weights[i] * (param_other.data - param_local.data)
         for param_person, param_local, param_suffix in zip(self.personal_model.parameters(), self.local_model.parameters(), suffix_terms):
             param_person.data = param_local.data + param_suffix
     
-    def local_train(self, models, indexes):
-        for model, index in zip(models, indexes):
-            self.models[index] = model
-        self.update_personal_model()
+    def local_train(self, models):
+        self.update_personal_model(models)
         optim = torch.optim.SGD(self.personal_model.parameters(), self.lr_local)
         self.personal_model.train()
         for _ in range(self.local_epoch):
@@ -108,7 +105,7 @@ class FedFomoServer(BaseServer):
                 models = []
                 for index in indexs:
                     models.append(self.models[index])
-                model, weights = client.local_train(models, indexs)
+                model, weights = client.local_train(models)
                 self.models[j] = model
                 if i != 0:
                     self.p[j] = weights
@@ -119,4 +116,3 @@ class FedFomoServer(BaseServer):
             if (i + 1) % 100 == 0:
                 self.lr_decay()
             self.print_inform(i)
-            

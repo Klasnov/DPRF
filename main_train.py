@@ -153,10 +153,10 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    # dataset, algorithm = console()
-    # main(dataset, algorithm, malicious=False)
+    dataset, algorithm = console()
+    main(dataset, algorithm, malicious=False)
 
-    for algorithm in ["pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-        main("mnist", algorithm, malicious=True)
-        if algorithm != "pFedMe":
-            main("mnist", algorithm, malicious=False)
+    # for algorithm in ["pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
+    #     main("mnist", algorithm, malicious=True)
+    #     if algorithm != "pFedMe":
+    #         main("mnist", algorithm, malicious=False)
