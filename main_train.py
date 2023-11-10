@@ -85,7 +85,7 @@ def main(dataset, algorithm, malicious = False):
         CLIENT_NUM = 20
     else:
         model = Emnist_Model()
-        CLIENT_NUM = 30
+        CLIENT_NUM = 25
 
     # Hyperparameters
     SELECT_RATIO = 0.3
@@ -153,11 +153,11 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    # dataset, algorithm = console()
-    # main(dataset, algorithm, malicious=False)
+    dataset, algorithm = console()
+    main(dataset, algorithm, malicious=False)
 
-    main("mnist", "DPRF", malicious=False)
-    for algorithm in ["pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-        main("mnist", algorithm, malicious=True)
-        if algorithm != "pFedMe":
-            main("mnist", algorithm, malicious=False)
+    # main("mnist", "DPRF", malicious=False)
+    # for algorithm in ["pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
+    #     main("mnist", algorithm, malicious=True)
+    #     if algorithm != "pFedMe":
+    #         main("mnist", algorithm, malicious=False)
