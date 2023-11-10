@@ -89,7 +89,7 @@ def main(dataset, algorithm, malicious = False):
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 750
+    ROUND_NUM = 500
     EPOCH = 10
     BATCH_SIZE = 32
 
@@ -153,10 +153,11 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    dataset, algorithm = console()
-    main(dataset, algorithm, malicious=False)
+    # dataset, algorithm = console()
+    # main(dataset, algorithm, malicious=False)
 
-    # for algorithm in ["pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-    #     main("mnist", algorithm, malicious=True)
-    #     if algorithm != "pFedMe":
-    #         main("mnist", algorithm, malicious=False)
+    main("mnist", "DPRF", malicious=False)
+    for algorithm in ["pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
+        main("mnist", algorithm, malicious=True)
+        if algorithm != "pFedMe":
+            main("mnist", algorithm, malicious=False)
