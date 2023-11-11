@@ -50,7 +50,7 @@ torch.save(torch.tensor(X_test), './data/emnist/data/x_test.pt')
 torch.save(torch.tensor(y_test), './data/emnist/data/y_test.pt')
 
 # Visualize label distribution
-label_dist_matrix = np.zeros((26, n_clients))  # Swap the dimensions
+label_dist_matrix = np.zeros((27, n_clients))  # Swap the dimensions
 for c in range(n_clients):
     label_counts = np.bincount(y_train[client_data_idx[c]], minlength=10)
     label_dist_matrix[:, c] = label_counts  # Swap the dimensions
@@ -60,7 +60,7 @@ plt.figure(figsize=(15, 6))
 plt.imshow(label_dist_matrix, cmap='YlGnBu', aspect='auto', origin='upper')
 plt.colorbar(label='Label Count')
 plt.xticks(np.arange(n_clients), np.arange(n_clients))
-plt.yticks(np.arange(26), np.arange(26))
+plt.yticks(np.arange(27), np.arange(27))
 plt.ylabel('Label')
 plt.xlabel('Client')
 plt.title('Label Distribution of CIFAR-10 Dataset across Clients')

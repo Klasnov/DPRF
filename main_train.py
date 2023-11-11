@@ -84,7 +84,7 @@ def main(dataset, algorithm, malicious = False):
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 1000
+    ROUND_NUM = 600
     EPOCH = 10
     BATCH_SIZE = 32
 
@@ -138,7 +138,5 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    # dataset, algorithm = console()
-    # main(dataset, algorithm, malicious=False)
-
-    main("cifar10", "DPRF", False)
+    for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto"]:
+        main("emnist", algorithm, False)
