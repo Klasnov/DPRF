@@ -19,7 +19,7 @@ X_test = emnist_testset.data.numpy()
 y_test = emnist_testset.targets.numpy()
 
 # Group data by labels
-label_to_indices = {label: np.where(y_train == label)[0] for label in range(47)}
+label_to_indices = {label: np.where(y_train == label)[0] for label in range(27)}
 
 # Generate random allocation vector for each label
 n_clients = 25
