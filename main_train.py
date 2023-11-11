@@ -79,7 +79,7 @@ def main(dataset, algorithm, malicious = False):
     elif dataset == "cifar10":
         model = Cifar10_Model()
         CLIENT_NUM = 20
-        ROUND_NUM = 900
+        ROUND_NUM = 1000
     else:
         model = Emnist_Model()
         CLIENT_NUM = 25

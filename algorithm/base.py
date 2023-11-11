@@ -160,7 +160,7 @@ class BaseServer(ABC):
         if dataset == "mnist":
             self.decay_round = 150
         elif dataset == "cifar10":
-            self.decay_round = 300
+            self.decay_round = 450
         else:
             self.decay_round = 250
 
