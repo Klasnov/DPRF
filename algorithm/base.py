@@ -77,13 +77,9 @@ class BaseClient(ABC):
         self.local_model.eval()
         with torch.no_grad():
             for inputs, labels in self.test_full_dataloader:
-                print(f"inputs.shape = {inputs.shape}")
-                print(f"labels.shape = {labels.shape}")
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 outputs = self.local_model(inputs)
-                print(f"outputs.shape = {outputs.shape}")
                 loss = F.cross_entropy(outputs, labels)
-                print(f"loss.shape = {loss.shape}\n")
                 losses.append(loss.item())
                 predictions = torch.argmax(outputs, dim=1)
                 correct_counts += torch.sum(predictions == labels).item()
@@ -322,7 +318,7 @@ class BaseServer(ABC):
                 self.model_per_evaluate()
             self.model_global_evaluate()
             
-            if (i + 1) % 150 == 0:
+            if (i + 1) % 350 == 0:
                 self.lr_decay()
             
             self.print_inform(i)

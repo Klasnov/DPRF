@@ -4,7 +4,6 @@ from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
 from algorithm.Ditto import DittoClient, DittoServer
-from algorithm.FedFomo import FedFomoClient, FedFomoServer
 from utils.util_models import Minst_Model, Cifar10_Model, Emnist_Model
 
 
@@ -43,7 +42,6 @@ def console():
         print("B. pFedMe")
         print("C. FedMGDA+")
         print("D. Ditto")
-        print("E. FedFomo")
         algorithm_choice = input("Your choice: ").lower()
 
         if algorithm_choice == 'a':
@@ -57,9 +55,6 @@ def console():
             break
         elif algorithm_choice == 'd':
             algorithm = "Ditto"
-            break
-        elif algorithm_choice == 'e':
-            algorithm = "FedFomo"
             break
         else:
             print("Invalid algorithm choice.")
@@ -89,7 +84,7 @@ def main(dataset, algorithm, malicious = False):
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 500
+    ROUND_NUM = 1000
     EPOCH = 10
     BATCH_SIZE = 32
 
@@ -126,7 +121,7 @@ def main(dataset, algorithm, malicious = False):
         server.global_train(malicious)
         server.save_result()
     
-    elif algorithm == "Ditto":
+    else:
         LR_GLOBAL = 0
         LR_LOCAL = 1e-3
         LAMDA = 1
@@ -136,16 +131,6 @@ def main(dataset, algorithm, malicious = False):
         server.global_train(malicious)
         server.save_result(server_addition=f"_{LAMDA}l")
     
-    else:
-        SELECT_RATIO = 0.2
-        LR_GLOBAL = 0
-        LR_LOCAL = 1e-3
-        server = FedFomoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM, CLIENT_NUM)
-        for i in range(CLIENT_NUM):
-            server.add_client(FedFomoClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LR_LOCAL, CLIENT_NUM))
-        server.global_train(malicious)
-        server.save_result(server_addition=f"_{SELECT_RATIO}r")
-    
     end_time = time()
     print("\nThe totla training time is %.2f min." % ((end_time - start_time) / 60))
     print("************   TRAIN STRAT   ************")
@@ -153,11 +138,7 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    dataset, algorithm = console()
-    main(dataset, algorithm, malicious=False)
+    # dataset, algorithm = console()
+    # main(dataset, algorithm, malicious=False)
 
-    # main("mnist", "DPRF", malicious=False)
-    # for algorithm in ["pFedMe", "FedMGDA+", "Ditto", "FedFomo"]:
-    #     main("mnist", algorithm, malicious=True)
-    #     if algorithm != "pFedMe":
-    #         main("mnist", algorithm, malicious=False)
+    main("cifar10", "DPRF", False)
