@@ -141,5 +141,5 @@ def main(dataset, algorithm, malicious = False):
 
 if __name__ == "__main__":
     for algorithm in ["pFedMe", "Ditto", "FedMGDA+", "DPRF"]:
-        main("emnist", algorithm)
+        main("cifar10", algorithm)
         

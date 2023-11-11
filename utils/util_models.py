@@ -34,6 +34,7 @@ class Cifar10_Model(nn.Module):
         x = F.relu(self.fc3(x))
         x = self.drop2(x)
         x = self.fc4(x)
+        return x
 
 class Emnist_Model(nn.Module):
     def __init__(self):
