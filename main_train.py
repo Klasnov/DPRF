@@ -75,16 +75,18 @@ def main(dataset, algorithm, malicious = False):
     if dataset == "mnist":
         model = Minst_Model()
         CLIENT_NUM = 10
+        ROUND_NUM = 500
     elif dataset == "cifar10":
         model = Cifar10_Model()
         CLIENT_NUM = 20
+        ROUND_NUM = 900
     else:
         model = Emnist_Model()
         CLIENT_NUM = 25
+        ROUND_NUM = 600
 
     # Hyperparameters
     SELECT_RATIO = 0.3
-    ROUND_NUM = 600
     EPOCH = 10
     BATCH_SIZE = 32
 
@@ -138,5 +140,8 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto"]:
-        main("emnist", algorithm, False)
+    main("emnist", "pFedMe")
+
+    # for algorithm in ["DPRF", "pFedMe", "FedMGDA+", "Ditto"]:
+    #     main("cifar10", algorithm, False)
+    #     main("cifar10", algorithm, True)

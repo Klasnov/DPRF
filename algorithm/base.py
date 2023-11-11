@@ -158,6 +158,13 @@ class BaseServer(ABC):
         self.decay_factor = 0
         self.malicious = False
 
+        if dataset == "mnist":
+            self.decay_round = 150
+        elif dataset == "cifar10":
+            self.decay_round = 300
+        else:
+            self.decay_round = 250
+
     def add_client(self, client):
         self.clients.append(client)
 
@@ -318,7 +325,7 @@ class BaseServer(ABC):
                 self.model_per_evaluate()
             self.model_global_evaluate()
             
-            if (i + 1) % 150 == 0:
+            if (i + 1) % self.decay_round == 0:
                 self.lr_decay()
             
             self.print_inform(i)
