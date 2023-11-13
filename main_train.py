@@ -7,6 +7,9 @@ from algorithm.Ditto import DittoClient, DittoServer
 from algorithm.models import Minst_Model, Cifar10_Model, Emnist_Model
 
 
+DATASETS = ["MNIST", "cifar10", "emnist"]
+ALGORITHMS = ["DPRF", "FedMGDA+", "pFedMe", "Ditto"]
+
 def console():
     print("Welcome to Personalized Federated Learning Program!")
     print("Please follow the prompts to select the dataset and algorithm for training.")
