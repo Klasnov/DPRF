@@ -4,7 +4,7 @@ from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
 from algorithm.Ditto import DittoClient, DittoServer
-from utils.util_models import Minst_Model, Cifar10_Model, Emnist_Model
+from algorithm.models import Minst_Model, Cifar10_Model, Emnist_Model
 
 
 def console():
@@ -75,7 +75,7 @@ def main(dataset, algorithm, malicious = False):
     if dataset == "mnist":
         model = Minst_Model()
         CLIENT_NUM = 10
-        ROUND_NUM = 500
+        ROUND_NUM = 250
     elif dataset == "cifar10":
         model = Cifar10_Model()
         CLIENT_NUM = 20
@@ -140,6 +140,4 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    for algorithm in ["pFedMe", "Ditto", "FedMGDA+", "DPRF"]:
-        main("cifar10", algorithm)
-        
+    main("mnist", "pFedMe")
