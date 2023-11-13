@@ -11,7 +11,6 @@ class DPRFClient(BaseClient):
     def __init__(self, client_id, algorithm, dataset, device, model,
                  local_epoch, local_batch_size, lr_local, alpha, k):
         super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
-        self.global_model = deepcopy(list(model.parameters()))
         self.alpha = alpha
         self.k = k
         self.local_update = []
@@ -57,7 +56,7 @@ class DPRFClient(BaseClient):
         for _ in range(self.local_epoch):
             self.update_per_model()
             self.update_local_model()
-        for param_local, param_global in zip(self.local_model.parameters(), self.global_model):
+        for param_local, param_global in zip(self.local_model.parameters(), self.global_model.parameters()):
             self.local_update.append((param_local - param_global) / self.local_epoch)
     
     def get_update(self):
@@ -66,7 +65,7 @@ class DPRFClient(BaseClient):
         else:
             multi_update = []
             for update in self.local_update:
-                multi_update.append(update * 10)
+                multi_update.append(update * 1e3)
             return multi_update
 
 class DPRFServer(BaseServer):

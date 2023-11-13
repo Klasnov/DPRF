@@ -17,6 +17,7 @@ class BaseClient(ABC):
         self.local_batch_size = local_batch_size
         self.lr_local_init = lr_local
         self.lr_local = lr_local
+        self.global_model = deepcopy(model).to(self.device)
         self.local_model = deepcopy(model).to(self.device)
         self.personal_model = deepcopy(model).to(self.device)
 
@@ -45,6 +46,7 @@ class BaseClient(ABC):
         return inputs.to(self.device), labels.to(self.device)
     
     def set_model(self, new_model_state_dict):
+        self.global_model.load_state_dict(new_model_state_dict)
         self.local_model.load_state_dict(new_model_state_dict)
     
     @abstractclassmethod
@@ -156,6 +158,10 @@ class BaseServer(ABC):
                                           batch_size=len(self.test_data), shuffle=False)
         self.decay_factor = 0
         self.malicious = False
+        if self.dataset == "mnist":
+            self.decay_round = 150
+        else:
+            self.decay_round = 200
 
     def add_client(self, client):
         self.clients.append(client)
@@ -176,7 +182,7 @@ class BaseServer(ABC):
         pass
 
     def lr_decay(self):
-        self.decay_factor += 10
+        self.decay_factor += 5
         self.lr_global = self.lr_global_init / self.decay_factor
         for client in self.clients:
             client.lr_decay(self.decay_factor)
@@ -316,5 +322,8 @@ class BaseServer(ABC):
             if self.algorithm != "FedMGDA+":
                 self.model_per_evaluate()
             self.model_global_evaluate()
+
+            if (i + 1) % self.decay_round == 0:
+                self.lr_decay()
             
             self.print_inform(i)

@@ -75,7 +75,7 @@ def main(dataset, algorithm, malicious = False):
     if dataset == "mnist":
         model = Minst_Model()
         CLIENT_NUM = 10
-        ROUND_NUM = 250
+        ROUND_NUM = 500
     elif dataset == "cifar10":
         model = Cifar10_Model()
         CLIENT_NUM = 20
@@ -140,4 +140,4 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    main("mnist", "pFedMe")
+    main("mnist", "Ditto", True)

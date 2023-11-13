@@ -9,7 +9,6 @@ class pFedMeClient(BaseClient):
     def __init__(self, client_id, algorithm, dataset, device, model,
                  local_epoch, local_batch_size, lamda, k, lr_local):
         super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
-        self.global_model = deepcopy(list(model.parameters()))
         self.lamda = lamda
         self.k = k
 
@@ -58,9 +57,12 @@ class pFedMeClient(BaseClient):
         if not self.malicious:
             return self.local_model
         else:
-            malicious_model = deepcopy(self.personal_model)
-            for param_local, param_per, param_malicious in zip(self.local_model.parameters(), self.personal_model.parameters(), malicious_model.parameters()):
-                param_malicious.data -= self.lamda * (param_local - param_per) * 5
+            malicious_model = deepcopy(self.global_model)
+            updates = []
+            for param_per, param_global in zip(self.personal_model.parameters(), self.global_model.parameters()):
+                updates.append(param_per.data - param_global.data)
+            for param_malicious, update in zip(malicious_model.parameters(), updates):
+                param_malicious.data = param_malicious.data + update * 1e3
             return malicious_model
 
 

@@ -11,13 +11,9 @@ class FedMGDAClient(BaseClient):
                  local_epoch, local_batch_size, lr_local):
         super().__init__(client_id, algorithm, dataset, device, model, local_epoch, local_batch_size, lr_local)
         self.updates = []
-        self.params_global = [torch.zeros_like(param) for param in model.parameters()]
     
     def local_train(self):
-        for param_global, param_local in zip(self.params_global, self.local_model.parameters()):
-            param_global.data = deepcopy(param_local.data)
         self.updates.clear()
-        
         self.local_model.train()
         optim = torch.optim.SGD(self.local_model.parameters(), self.lr_local)
         for inputs, labels in self.train_dataloader:
@@ -29,7 +25,7 @@ class FedMGDAClient(BaseClient):
             loss.backward()
             optim.step()
         
-        for param_global, param_local in zip(self.local_model.parameters(), self.params_global):
+        for param_global, param_local in zip(self.local_model.parameters(), self.global_model.parameters()):
             self.updates.append(param_global - param_local)
     
     def get_update(self):
@@ -38,7 +34,7 @@ class FedMGDAClient(BaseClient):
         else:
             multi_update = []
             for update in self.updates:
-                multi_update.append(update * 10)
+                multi_update.append(update * 1e3)
             return multi_update
     
 class FedMGDAServer(BaseServer):
