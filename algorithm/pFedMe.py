@@ -62,7 +62,7 @@ class pFedMeClient(BaseClient):
             for param_per, param_global in zip(self.personal_model.parameters(), self.global_model.parameters()):
                 updates.append(param_per.data - param_global.data)
             for param_malicious, update in zip(malicious_model.parameters(), updates):
-                param_malicious.data = param_malicious.data + update * 1e3
+                param_malicious.data = param_malicious.data + update * 1e2
             return malicious_model
 
 

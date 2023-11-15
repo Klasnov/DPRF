@@ -156,7 +156,7 @@ class BaseServer(ABC):
         self.test_labels = torch.load(f'./data/{dataset}/data/y_test.pt').to(torch.int64)
         self.test_dataloader = DataLoader(TensorDataset(self.test_data, self.test_labels),
                                           batch_size=len(self.test_data), shuffle=False)
-        self.decay_factor = 0
+        self.decay_factor = 10
         self.malicious = False
         if self.dataset == "mnist":
             self.decay_round = 150
