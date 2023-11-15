@@ -97,4 +97,4 @@ if __name__ == "__main__":
     # algorithm_compare("mnist_malicious")
     # parameter_compare("a")
     # parameter_compare("k")
-    parameter_compare("η")
+    parameter_compare("a")
