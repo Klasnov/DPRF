@@ -323,7 +323,7 @@ class BaseServer(ABC):
                 self.model_per_evaluate()
             self.model_global_evaluate()
 
-            if (i + 1) % self.decay_round == 0:
-                self.lr_decay()
+            # if (i + 1) % self.decay_round == 0:
+            #     self.lr_decay()
             
             self.print_inform(i)

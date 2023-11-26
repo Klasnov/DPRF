@@ -4,11 +4,12 @@ from algorithm.DPRF import DPRFServer, DPRFClient
 from algorithm.pFedMe import pFedMeClient, pFedMeServer
 from algorithm.FedMGDA import FedMGDAClient, FedMGDAServer
 from algorithm.Ditto import DittoClient, DittoServer
+from algorithm.APFL import APFLClient, APFLServer
 from algorithm.models import Minst_Model, Cifar10_Model, Emnist_Model
 
 
 DATASETS = ["MNIST", "cifar10", "emnist"]
-ALGORITHMS = ["DPRF", "FedMGDA+", "pFedMe", "Ditto"]
+ALGORITHMS = ["DPRF", "FedMGDA+", "pFedMe", "Ditto", "APFL"]
 
 def console():
     print("Welcome to Personalized Federated Learning Program!")
@@ -45,6 +46,7 @@ def console():
         print("B. pFedMe")
         print("C. FedMGDA+")
         print("D. Ditto")
+        print("E. APFL")
         algorithm_choice = input("Your choice: ").lower()
 
         if algorithm_choice == 'a':
@@ -59,6 +61,8 @@ def console():
         elif algorithm_choice == 'd':
             algorithm = "Ditto"
             break
+        elif algorithm_choice == 'e':
+            algorithm = "APFL"
         else:
             print("Invalid algorithm choice.")
             print()
@@ -82,7 +86,7 @@ def main(dataset, algorithm, malicious = False):
     elif dataset == "cifar10":
         model = Cifar10_Model()
         CLIENT_NUM = 20
-        ROUND_NUM = 1000
+        ROUND_NUM = 750
     else:
         model = Emnist_Model()
         CLIENT_NUM = 25
@@ -92,10 +96,12 @@ def main(dataset, algorithm, malicious = False):
     SELECT_RATIO = 0.3
     EPOCH = 10
     BATCH_SIZE = 32
+    LR_LOCAL = 1e-3
+    if dataset == "cifar10":
+        LR_LOCAL = 1e-2
 
     if algorithm == "DPRF":
         LR_GLOBAL = 1
-        LR_LOCAL = 1e-3
         ALPHA = 7
         K = 10
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
@@ -107,7 +113,6 @@ def main(dataset, algorithm, malicious = False):
     
     elif algorithm == "pFedMe":
         LR_GLOBAL = 1e-3
-        LR_LOCAL = 1e-3
         LAMDA = 15
         K = 5
         BETA = 2
@@ -119,22 +124,29 @@ def main(dataset, algorithm, malicious = False):
 
     elif algorithm == "FedMGDA+":
         LR_GLOBAL = 1
-        LR_LOCAL = 1e-3
         server = FedMGDAServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(FedMGDAClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LR_LOCAL))
         server.global_train(malicious)
         server.save_result()
     
-    else:
+    elif algorithm == "Ditto":
         LR_GLOBAL = 0
-        LR_LOCAL = 1e-3
         LAMDA = 1
         server = DittoServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(DittoClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LAMDA, LR_LOCAL))
         server.global_train(malicious)
         server.save_result(server_addition=f"_{LAMDA}l")
+    
+    else:
+        LR_GLOBAL = 0
+        ALPHA = 0.5
+        server = APFLServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
+        for i in range(CLIENT_NUM):
+            server.add_client(APFLClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LR_LOCAL, ALPHA))
+        server.global_train()
+        server.save_result(client_addition=f"_{ALPHA}a")
     
     end_time = time()
     print("\nThe totla training time is %.2f min." % ((end_time - start_time) / 60))
@@ -143,4 +155,6 @@ def main(dataset, algorithm, malicious = False):
 
 
 if __name__ == "__main__":
-    main("mnist", "Ditto", True)
+    for algorithm in ALGORITHMS:
+        main("mnist", algorithm, False)
+        main("mnist", algorithm, True)

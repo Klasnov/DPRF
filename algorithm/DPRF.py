@@ -1,9 +1,7 @@
 import torch
 import cvxpy as cp
 import numpy as np
-import torch.nn as nn
 import torch.nn.functional as F
-from copy import deepcopy
 from .base import BaseClient, BaseServer
 
 

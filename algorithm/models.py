@@ -19,29 +19,23 @@ class Minst_Model(nn.Module):
 class Cifar10_Model(nn.Module):
     def __init__(self):
         super(Cifar10_Model, self).__init__()
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=5, padding=1)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=3)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.norm = nn.BatchNorm2d(32)
-        self.fc1 = nn.Linear(32 * 6 * 6, 512)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=5, stride=1)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=5, stride=1)
+        self.pool = nn.MaxPool2d(kernel_size=2)
+        self.norm = nn.BatchNorm2d(64)
+        self.fc1 = nn.Linear(64 * 5 * 5, 512)
         self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 64)
-        self.fc4 = nn.Linear(64, 10)
-        self.drop = nn.Dropout(p=0.3)
+        self.fc3 = nn.Linear(256, 10)
     
     def forward(self, x: torch.Tensor):
         x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = self.pool(x)
-        x = F.relu(self.conv3(x))
         x = self.norm(self.pool(x))
+        x = F.relu(self.conv2(x))
+        x = self.pool(self.norm(x))
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = self.drop(x)
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
+        x = self.fc3(x)
         return x
 
 class Emnist_Model(nn.Module):

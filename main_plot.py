@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-ALGORITHMS = ["DPRF", "FedMGDA+", "pFedMe", "Ditto"]
+ALGORITHMS = ["DPRF", "FedMGDA+", "pFedMe", "Ditto", "APFL"]
 
 INDEX_TO_LABEL = {
     0: "Training Accuracy",
