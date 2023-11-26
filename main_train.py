@@ -112,7 +112,7 @@ def main(dataset, algorithm, malicious = False):
         server.save_result(client_addition=f"_{ALPHA}a_{K}k")
     
     elif algorithm == "pFedMe":
-        LR_GLOBAL = 1e-3
+        LR_GLOBAL = 0
         LAMDA = 15
         K = 5
         BETA = 2
@@ -145,7 +145,7 @@ def main(dataset, algorithm, malicious = False):
         server = APFLServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
         for i in range(CLIENT_NUM):
             server.add_client(APFLClient(i, algorithm, dataset, device, model, EPOCH, BATCH_SIZE, LR_LOCAL, ALPHA))
-        server.global_train()
+        server.global_train(malicious)
         server.save_result(client_addition=f"_{ALPHA}a")
     
     end_time = time()
