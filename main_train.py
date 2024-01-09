@@ -70,7 +70,7 @@ def console():
 
     return dataset, algorithm
 
-def main(dataset, algorithm, lr_global, lr_local, malicious = False):
+def main(dataset, algorithm, malicious = False):
     
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -86,11 +86,11 @@ def main(dataset, algorithm, lr_global, lr_local, malicious = False):
     elif dataset == "cifar10":
         model = Cifar10_Model()
         CLIENT_NUM = 20
-        ROUND_NUM = 100
+        ROUND_NUM = 50
     else:
         model = Emnist_Model()
         CLIENT_NUM = 25
-        ROUND_NUM = 600
+        ROUND_NUM = 1500
 
     # Hyperparameters
     SELECT_RATIO = 0.3
@@ -98,12 +98,10 @@ def main(dataset, algorithm, lr_global, lr_local, malicious = False):
     BATCH_SIZE = 32
     LR_LOCAL = 1e-3
     if dataset == "cifar10":
-        # LR_LOCAL = 1e-2
-        LR_LOCAL = lr_local
+        LR_LOCAL = 1e-2
 
     if algorithm == "DPRF":
-        # LR_GLOBAL = 1
-        LR_GLOBAL = lr_global
+        LR_GLOBAL = 1
         ALPHA = 7
         K = 10
         server = DPRFServer(algorithm, dataset, device, model, LR_GLOBAL, SELECT_RATIO, ROUND_NUM)
@@ -157,5 +155,5 @@ def main(dataset, algorithm, lr_global, lr_local, malicious = False):
 
 
 if __name__ == "__main__":
-    for lr_global in [1.5, 1.75, 2, 2.5, 3]:
-        main("cifat10", "DPRF", lr_global, 1e-3)
+    for algorithm in ALGORITHMS:
+        main("emnist", algorithm, False)
