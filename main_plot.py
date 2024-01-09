@@ -93,8 +93,7 @@ def algorithm_compare(dataset):
         algorithm_compare_plot(file_pathes, dataset, index)
 
 if __name__ == "__main__":
-    # algorithm_compare("mnist")
-    # algorithm_compare("mnist_malicious")
     # parameter_compare("a")
     # parameter_compare("k")
-    parameter_compare("a")
+    algorithm_compare("mnist")
+    # algorithm_compare("mnist_malicious")
