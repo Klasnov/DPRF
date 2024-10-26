@@ -1,0 +1,6 @@
+data/mnist/data/*
+data/cifar10/data/*
+data/emnist/data/*
+algorithm/__pycache__/*
+img/*
+result/*
