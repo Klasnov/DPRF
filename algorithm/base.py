@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from torch.utils.data import DataLoader, TensorDataset
 
 
-MALICIOUS = {0: "normal (no attack)", 1: "amplifying attack", 2: "Gaussian noise attack", 3: "flipping attack"}
+MALICIOUS = {0: "normal", 1: "amplifying", 2: "noise", 3: "flipping"}
 
 
 class BaseClient(ABC):
@@ -24,12 +24,12 @@ class BaseClient(ABC):
         self.local_model = deepcopy(model)
         self.personal_model = deepcopy(model).to(self.device)
 
-        self.train_data = torch.load(f'./data/{dataset}/data/client{client_id}/x.pt').to(torch.float32)
-        self.train_labels = torch.load(f'./data/{dataset}/data/client{client_id}/y.pt').to(torch.int64)
+        self.train_data = torch.load(f'data/{dataset}/data/client{client_id}/x.pt', weights_only=True).to(torch.float32)
+        self.train_labels = torch.load(f'data/{dataset}/data/client{client_id}/y.pt', weights_only=True).to(torch.int64)
         train_dataset = TensorDataset(self.train_data, self.train_labels)
 
-        self.test_data = torch.load(f'./data/{dataset}/data/x_test.pt').to(torch.float32)
-        self.test_labels = torch.load(f'./data/{dataset}/data/y_test.pt').to(torch.int64)
+        self.test_data = torch.load(f'data/{dataset}/data/x_test.pt', weights_only=True).to(torch.float32)
+        self.test_labels = torch.load(f'data/{dataset}/data/y_test.pt', weights_only=True).to(torch.int64)
         test_dataset = TensorDataset(self.test_data, self.test_labels)
 
         self.train_dataloader = DataLoader(train_dataset, batch_size=local_batch_size, shuffle=True)
@@ -105,7 +105,7 @@ class BaseClient(ABC):
         return (correct_counts / total_samples), np.mean(losses), total_samples
     
     def save_local_model(self, client_addition = ""):
-        client_model_dir = f"./model/{self.algorithm}/clients"
+        client_model_dir = f"model/{self.algorithm}/clients"
         if not os.path.exists(client_model_dir):
             os.makedirs(client_model_dir)
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
@@ -113,7 +113,7 @@ class BaseClient(ABC):
         torch.save(self.local_model.state_dict(), client_model_path)
     
     def save_personal_model(self, client_addition = ""):
-        client_model_dir = f"./model/{self.algorithm}/clients"
+        client_model_dir = f"model/{self.algorithm}/clients"
         if not os.path.exists(client_model_dir):
             os.makedirs(client_model_dir)
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
@@ -121,14 +121,14 @@ class BaseClient(ABC):
         torch.save(self.personal_model.state_dict(), client_model_path)
     
     def load_local_model(self, client_addition = ""):
-        client_model_dir = f"./model/{self.algorithm}/clients"
+        client_model_dir = f"model/{self.algorithm}/clients"
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_local.pt"
         client_state_dict = torch.load(client_model_path)
         self.local_model.load_state_dict(client_state_dict)
     
     def load_personal_model(self, client_addition = ""):
-        client_model_dir = f"./model/{self.algorithm}/clients"
+        client_model_dir = f"model/{self.algorithm}/clients"
         client_model_path = f"{client_model_dir}/{self.dataset}_{self.client_id}id_{self.local_epoch}epc"
         client_model_path = f"{client_model_path}_{self.local_batch_size}bch_{self.lr_local}ll{client_addition}_personal.pt"
         client_state_dict = torch.load(client_model_path)
@@ -154,8 +154,8 @@ class BaseServer(ABC):
         self.personal_accuracies = []
         self.global_accuracies = []
         self.test_std_devs = []
-        self.test_data = torch.load(f'./data/{dataset}/data/x_test.pt').to(torch.float32)
-        self.test_labels = torch.load(f'./data/{dataset}/data/y_test.pt').to(torch.int64)
+        self.test_data = torch.load(f'data/{dataset}/data/x_test.pt', weights_only=True).to(torch.float32)
+        self.test_labels = torch.load(f'data/{dataset}/data/y_test.pt', weights_only=True).to(torch.int64)
         self.test_dataloader = DataLoader(TensorDataset(self.test_data, self.test_labels), batch_size=len(self.test_data), shuffle=False)
         self.malicious_type = 0
 
@@ -244,7 +244,7 @@ class BaseServer(ABC):
         global_acc = correct_counts / len(self.test_data)
         self.global_accuracies.append(global_acc)
 
-    def save_result(self, server_addition="", client_addition=""):
+    def save_result(self, server_addition="", client_addition="", use_addition=False):
         result_data = {
             "Train Accuracy": self.train_accuracies,
             "Train Loss": self.train_losses,
@@ -255,14 +255,17 @@ class BaseServer(ABC):
         if self.algorithm != "FedMGDA+":
             result_data["Personal Accuracy"] = self.personal_accuracies
         result_df = pd.DataFrame(result_data)
-        result_dir = f"./result/{self.algorithm}"
+        result_dir = f"result/{self.dataset}/{MALICIOUS[self.malicious_type]}"
         if not os.path.exists(result_dir):
             os.makedirs(result_dir)
-        server_settings = f"{self.dataset}_{self.lr_global}lg{server_addition}"
-        client = self.clients[0]
-        client_settings = f"{client.local_epoch}epc_{client.local_batch_size}bch_{client.lr_local}ll{client_addition}"
-        malicious_str = f"_{self.malicious_type}mali"
-        result_file = f"{result_dir}/{server_settings}_{client_settings}{malicious_str}.csv"
+        if use_addition:
+            server_settings = f"{self.dataset}_{self.lr_global}lg{server_addition}"
+            client = self.clients[0]
+            client_settings = f"{client.local_epoch}epc_{client.local_batch_size}bch_{client.lr_local}ll{client_addition}"
+            malicious_str = f"_{self.malicious_type}mali"
+            result_file = f"{result_dir}/{server_settings}_{client_settings}{malicious_str}.csv"
+        else:
+            result_file = f"{result_dir}/{self.algorithm}.csv"
 
         if self.load_save_model:
             if os.path.exists(result_file):
@@ -272,7 +275,7 @@ class BaseServer(ABC):
         result_df.to_csv(result_file, index=False)
     
     def save_model(self, server_addition = "", client_addition = ""):
-        server_model_dir = f"./model/{self.algorithm}"
+        server_model_dir = f"model/{self.algorithm}"
         if not os.path.exists(server_model_dir):
             os.makedirs(server_model_dir)
         server_model_path = f"{server_model_dir}/{self.dataset}_{self.lr_global}lg{server_addition}.pt"
@@ -282,7 +285,7 @@ class BaseServer(ABC):
             client.save_personal_model(client_addition)
     
     def load_model(self, server_addition = "", client_addition = ""):
-        server_model_dir = f"./model/{self.algorithm}"
+        server_model_dir = f"model/{self.algorithm}"
         server_model_path = f"{server_model_dir}/{self.dataset}_{self.lr_global}lg{server_addition}.pt"
         if os.path.exists(server_model_path):
             server_state_dict = torch.load(server_model_path)

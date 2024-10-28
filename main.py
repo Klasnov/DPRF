@@ -213,11 +213,11 @@ def main(dataset, algorithm, malicious_type = 0, indicated_round = 0, load_save_
         client_addition=f"_{BETA}b"
     
     if load_save_model:
-        server.load_model()
+        server.load_model(server_addition=server_addition, client_addition=client_addition)
     server.global_train(ROUND_NUM, malicious_type, MALICIOUS_RATIO, APLIFYING_FACTOR, load_save_model)
-    server.save_result(server_addition=server_addition, client_addition=client_addition)
+    server.save_result(server_addition=server_addition, client_addition=client_addition, use_addition=False)
     if load_save_model:
-        server.save_model()
+        server.save_model(server_addition=server_addition, client_addition=client_addition)
     
     end_time = time()
     print("\nThe totla training time is %.2f min." % ((end_time - start_time) / 60))
@@ -226,4 +226,4 @@ def main(dataset, algorithm, malicious_type = 0, indicated_round = 0, load_save_
 
 
 if __name__ == "__main__":
-    main(dataset="mnist", algorithm="pFedMe")
+    main(dataset="emnist", algorithm="pFedMe", indicated_round=10)
